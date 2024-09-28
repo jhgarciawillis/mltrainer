@@ -1,0 +1,210 @@
+import pandas as pd
+import numpy as np
+import streamlit as st
+import plotly.graph_objects as go
+from _0config import config
+from _2utility import debug_print, plot_prediction_vs_actual
+from _7metrics import calculate_metrics, display_metrics, plot_residuals
+
+class PredictionProcessor:
+    def __init__(self, truncate_sheet_name_func, calculate_metrics_func, debug_print_func):
+        self.truncate_sheet_name_func = truncate_sheet_name_func
+        self.calculate_metrics_func = calculate_metrics_func
+        self.debug_print_func = debug_print_func
+
+    def create_predictions_file(self, predictions_path, all_models, flattened_models, ensemble, 
+                                clustered_X_train_combined, clustered_X_test_combined, 
+                                flattened_X_train, flattened_X_test, ensemble_cv_results):
+        st.subheader("Creating Predictions File")
+        with pd.ExcelWriter(predictions_path, engine='xlsxwriter') as writer:
+            self._process_clustered_models(writer, all_models, clustered_X_train_combined, 
+                                           clustered_X_test_combined, ensemble_cv_results)
+            self._process_flattened_models(writer, flattened_models, flattened_X_train, 
+                                           flattened_X_test, ensemble_cv_results)
+            self._process_ensemble_model(writer, ensemble, flattened_X_train, flattened_X_test, 
+                                         ensemble_cv_results)
+            
+        st.success(f"Predictions saved to: {predictions_path}")
+
+    def _process_clustered_models(self, writer, all_models, clustered_X_train_combined, 
+                                  clustered_X_test_combined, ensemble_cv_results):
+        st.write("Processing Clustered Models")
+        progress_bar = st.progress(0)
+        for i, (cluster_name, models) in enumerate(all_models.items()):
+            X_train = clustered_X_train_combined[cluster_name]
+            X_test = clustered_X_test_combined[cluster_name]
+            y_train = X_train[config.target_column]
+            y_test = X_test[config.target_column]
+            X_train = X_train.drop(columns=[config.target_column])
+            X_test = X_test.drop(columns=[config.target_column])
+
+            for model_name, model in models.items():
+                self._process_model(writer, model, X_train, X_test, y_train, y_test, 
+                                    f"{cluster_name}_{model_name}", 
+                                    ensemble_cv_results.get(cluster_name, {}).get(model_name, []))
+            progress_bar.progress((i + 1) / len(all_models))
+
+    def _process_flattened_models(self, writer, flattened_models, flattened_X_train, 
+                                  flattened_X_test, ensemble_cv_results):
+        st.write("Processing Flattened Models")
+        y_train = flattened_X_train[config.target_column]
+        y_test = flattened_X_test[config.target_column]
+        X_train = flattened_X_train.drop(columns=[config.target_column])
+        X_test = flattened_X_test.drop(columns=[config.target_column])
+        progress_bar = st.progress(0)
+        for i, (model_name, model) in enumerate(flattened_models.items()):
+            self._process_model(writer, model, X_train, X_test, y_train, y_test, 
+                                f"flattened_{model_name}", 
+                                ensemble_cv_results.get('flattened', {}).get(model_name, []))
+            progress_bar.progress((i + 1) / len(flattened_models))
+
+    def _process_ensemble_model(self, writer, ensemble, flattened_X_train, flattened_X_test, 
+                                ensemble_cv_results):
+        if ensemble is not None:
+            st.write("Processing Ensemble Model")
+            y_train = flattened_X_train[config.target_column]
+            y_test = flattened_X_test[config.target_column]
+            X_train = flattened_X_train.drop(columns=[config.target_column])
+            X_test = flattened_X_test.drop(columns=[config.target_column])
+            self._process_model(writer, ensemble, X_train, X_test, y_train, y_test, 
+                                "Ensemble", ensemble_cv_results.get('ensemble', []))
+
+    def _process_model(self, writer, model, X_train, X_test, y_train, y_test, model_name, cv_scores):
+        st.write(f"Processing model: {model_name}")
+        
+        # Ensure X_train and X_test have the same columns as the model expects
+        if hasattr(model, 'feature_names_in_'):
+            expected_features = model.feature_names_in_
+            X_train = X_train.reindex(columns=expected_features, fill_value=0)
+            X_test = X_test.reindex(columns=expected_features, fill_value=0)
+        
+        y_pred_train = model.predict(X_train)
+        y_pred_test = model.predict(X_test)
+        
+        train_metrics = self.calculate_metrics_func(y_train, y_pred_train)
+        test_metrics = self.calculate_metrics_func(y_test, y_pred_test)
+        
+        sheet_name = self.truncate_sheet_name_func(f"{model_name}_Predictions")
+        self._save_predictions(writer, y_train, y_pred_train, y_test, y_pred_test, sheet_name)
+        self._save_metrics(writer, train_metrics, test_metrics, sheet_name)
+        self._save_cv_results(writer, cv_scores, sheet_name)
+        
+        # Display metrics and plots in Streamlit
+        self._display_metrics(train_metrics, test_metrics, model_name)
+        self._plot_predictions(y_train, y_pred_train, y_test, y_pred_test, model_name)
+        self._plot_cv_scores(cv_scores, model_name)
+
+    def _save_predictions(self, writer, y_train, y_pred_train, y_test, y_pred_test, sheet_name):
+        pd.DataFrame({
+            'y_train': y_train,
+            'y_pred_train': y_pred_train,
+            'y_test': y_test,
+            'y_pred_test': y_pred_test
+        }).to_excel(writer, sheet_name=f"{sheet_name}_predictions", index=False)
+
+    def _save_metrics(self, writer, train_metrics, test_metrics, sheet_name):
+        pd.DataFrame({
+            'Metric': list(train_metrics.keys()) + list(test_metrics.keys()),
+            'Train': list(train_metrics.values()) + [np.nan] * len(test_metrics),
+            'Test': [np.nan] * len(train_metrics) + list(test_metrics.values())
+        }).to_excel(writer, sheet_name=f"{sheet_name}_metrics", index=False)
+
+    def _save_cv_results(self, writer, cv_results, sheet_name):
+        if cv_results:
+            pd.DataFrame({'CV Score': cv_results}).to_excel(writer, sheet_name=f"{sheet_name}_cv_results", index_label='Fold')
+
+    def _display_metrics(self, train_metrics, test_metrics, model_name):
+        st.write(f"Metrics for {model_name}")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.write("Train Metrics")
+            display_metrics(train_metrics)
+        with col2:
+            st.write("Test Metrics")
+            display_metrics(test_metrics)
+
+    def _plot_predictions(self, y_train, y_pred_train, y_test, y_pred_test, model_name):
+        st.write(f"Predictions Plot for {model_name}")
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=y_train, y=y_pred_train, mode='markers', name='Train'))
+        fig.add_trace(go.Scatter(x=y_test, y=y_pred_test, mode='markers', name='Test'))
+        fig.add_trace(go.Scatter(x=[min(y_train.min(), y_test.min()), max(y_train.max(), y_test.max())],
+                                 y=[min(y_train.min(), y_test.min()), max(y_train.max(), y_test.max())],
+                                 mode='lines', name='Ideal'))
+        fig.update_layout(title='Actual vs Predicted',
+                          xaxis_title='Actual',
+                          yaxis_title='Predicted')
+        st.plotly_chart(fig)
+
+    def _plot_cv_scores(self, cv_scores, model_name):
+        if cv_scores:
+            st.write(f"Cross-Validation Scores for {model_name}")
+            fig = go.Figure()
+            fig.add_trace(go.Box(y=cv_scores, name='CV Scores'))
+            fig.update_layout(title='Cross-Validation Scores Distribution',
+                              yaxis_title='Score')
+            st.plotly_chart(fig)
+            st.write(f"Mean CV Score: {np.mean(cv_scores):.4f} ± {np.std(cv_scores):.4f}")
+
+def make_predictions(model, X_data):
+    return model.predict(X_data)
+
+def display_predictions(predictions, actual_values=None):
+    st.subheader("Predictions")
+    df = pd.DataFrame({'Predicted': predictions})
+    if actual_values is not None:
+        df['Actual'] = actual_values
+        df['Error'] = df['Actual'] - df['Predicted']
+    st.dataframe(df)
+    
+    if actual_values is not None:
+        plot_prediction_vs_actual(actual_values, predictions)
+        plot_residuals(actual_values, predictions)
+
+def predict_for_new_data(models, new_data, cluster_models):
+    st.subheader("Predictions for New Data")
+    
+    predictions = []
+    for index, row in new_data.iterrows():
+        cluster_name, cluster_label = predict_cluster(row, cluster_models)
+        model_key = f"{cluster_name}_{cluster_label}"
+        
+        if model_key in models:
+            model = models[model_key]
+            prediction = make_predictions(model, row.to_frame().T)
+            predictions.append({
+                "Index": index,
+                "Cluster": cluster_name,
+                "Label": cluster_label,
+                "Prediction": prediction[0]
+            })
+        else:
+            predictions.append({
+                "Index": index,
+                "Cluster": cluster_name,
+                "Label": cluster_label,
+                "Prediction": "No model available"
+            })
+    
+    predictions_df = pd.DataFrame(predictions)
+    st.write("Predictions:")
+    st.dataframe(predictions_df)
+    
+    return predictions_df
+
+def predict_cluster(data_point, cluster_models):
+    for model_name, model in cluster_models.items():
+        if 'dbscan' in model_name.lower():
+            cluster = model.fit_predict(data_point.values.reshape(1, -1))
+            if cluster[0] != -1:  # Not an outlier
+                return model_name.replace('_dbscan', ''), cluster[0]
+        elif 'kmeans' in model_name.lower():
+            cluster = model.predict(data_point.values.reshape(1, -1))
+            return model_name.replace('_kmeans', ''), cluster[0]
+    return 'default', 0  # If no cluster is determined, use a default cluster
+
+def evaluate_predictions(y_true, y_pred):
+    metrics = calculate_metrics(y_true, y_pred)
+    display_metrics(metrics)
+    plot_prediction_vs_actual(y_true, y_pred)
+    plot_residuals(y_true, y_pred)
