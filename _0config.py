@@ -1,9 +1,8 @@
 import os
 from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor
+from sklearn.neighbors import KNeighborsRegressor
 from xgboost import XGBRegressor
 from lightgbm import LGBMRegressor
-from catboost import CatBoostRegressor
-from sklearn.neighbors import KNeighborsRegressor
 
 # Define the base directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -48,7 +47,6 @@ MODEL_CLASSES = {
     'xgb': XGBRegressor,
     'lgbm': LGBMRegressor,
     'ada': AdaBoostRegressor,
-    'catboost': CatBoostRegressor,
     'knn': KNeighborsRegressor
 }
 
@@ -72,11 +70,6 @@ HYPERPARAMETER_GRIDS = {
     'ada': {
         'n_estimators': [50, 100, 200],
         'learning_rate': [0.01, 0.1, 1.0]
-    },
-    'catboost': {
-        'iterations': [100, 200, 300],
-        'learning_rate': [0.01, 0.1, 0.2],
-        'depth': [4, 6, 8]
     },
     'knn': {
         'n_neighbors': [3, 5, 7],
