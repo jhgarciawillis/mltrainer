@@ -1,6 +1,7 @@
 import os
 import shutil
 import logging
+from logging.handlers import RotatingFileHandler
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -13,20 +14,29 @@ def setup_directory(directory_path):
     os.makedirs(directory_path)
 
 def setup_logging(log_file):
-    """Sets up logging to both console and file."""
-    logging.basicConfig(
-        level=logging.DEBUG,
-        format='%(asctime)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_file),
-            logging.StreamHandler()
-        ]
-    )
+    """Sets up logging to both console and file with rotation."""
+    logger = logging.getLogger('mltrainer')
+    logger.setLevel(logging.INFO)
+    
+    # Rotating file handler
+    file_handler = RotatingFileHandler(log_file, maxBytes=1024*1024, backupCount=5)
+    file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    file_handler.setFormatter(file_formatter)
+    
+    # Console handler
+    console_handler = logging.StreamHandler()
+    console_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(console_formatter)
+    
+    logger.addHandler(file_handler)
+    logger.addHandler(console_handler)
+    
+    return logger
 
-def debug_print(*args):
+def debug_print(logger, *args):
     """Logs debugging information and displays it in Streamlit."""
     message = ' '.join(map(str, args))
-    logging.debug(message)
+    logger.debug(message)
     st.text(message)
 
 def truncate_sheet_name(sheet_name, max_length=31):
@@ -37,15 +47,14 @@ def check_and_remove_duplicate_columns(df):
     """Check and remove duplicate columns from a DataFrame."""
     duplicate_columns = df.columns[df.columns.duplicated()]
     if len(duplicate_columns) > 0:
-        debug_print(f"Duplicate columns found: {', '.join(duplicate_columns)}")
+        st.warning(f"Duplicate columns found and removed: {', '.join(duplicate_columns)}")
         df = df.loc[:, ~df.columns.duplicated()]
-        debug_print("Duplicate columns removed.")
     return df
 
 def check_and_reset_indices(df):
     """Check and reset indices if they are not unique or continuous."""
     if not df.index.is_unique or not df.index.is_monotonic_increasing:
-        debug_print("Indices are not unique or continuous. Resetting index.")
+        st.info("Indices are not unique or continuous. Resetting index.")
         df = df.reset_index(drop=True)
     return df
 
