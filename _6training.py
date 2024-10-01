@@ -59,25 +59,11 @@ def tune_hyperparameters(model_name, model, x_train, y_train, preprocessor, tuni
     st.write(f"Best cross-validation score: {best_score:.4f}")
     return best_estimator
 
-def train_and_save_model(model_name, x_train, y_train, preprocessor, filename, save_path=MODELS_DIRECTORY, tuning_strategy='None'):
-    """Train the model and save it."""
-    st.write(f"Starting train_and_save_model for {filename}...")
-    try:
-        model = get_model_instance(model_name)
-        if tuning_strategy != 'None':
-            model = tune_hyperparameters(model_name, model, x_train, y_train, preprocessor, tuning_strategy)
-        else:
-            if preprocessor is not None:
-                model = create_pipeline(model, preprocessor)
-            model.fit(x_train, y_train)
-        
-        model_filename = os.path.join(save_path, f"{filename}.joblib")
-        joblib.dump(model, model_filename)
-        st.write(f"Model saved at: {model_filename}")
-        return model
-    except Exception as e:
-        st.error(f"Error in train_and_save_model: {str(e)}")
-        raise
+def save_model(model, filename, save_path=MODELS_DIRECTORY):
+    """Save the trained model."""
+    model_filename = os.path.join(save_path, f"{filename}.joblib")
+    joblib.dump(model, model_filename)
+    st.write(f"Model saved at: {model_filename}")
 
 def train_and_validate_models(data_splits, clustered_X_train_combined, clustered_X_test_combined, models_to_use, tuning_method):
     st.subheader("Training and Validating Models")
@@ -211,9 +197,7 @@ def train_models(x_train, y_train, cluster_name, models_to_use, save_path, tunin
             best_model.fit(x_train, y_train)
             cv_scores = cross_val_score(best_model, x_train, y_train, cv=MODEL_CV_SPLITS)
 
-        model_filename = os.path.join(save_path, f"{cluster_name}_{model_name}.joblib")
-        joblib.dump(best_model, model_filename)
-        st.write(f"Model saved at: {model_filename}")
+        save_model(best_model, f"{cluster_name}_{model_name}")
 
         models[model_name] = best_model
         cv_results[model_name] = cv_scores.tolist()
