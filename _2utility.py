@@ -18,12 +18,10 @@ def setup_logging(log_file):
     logger = logging.getLogger('mltrainer')
     logger.setLevel(logging.INFO)
     
-    # Rotating file handler
     file_handler = RotatingFileHandler(log_file, maxBytes=1024*1024, backupCount=5)
     file_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     file_handler.setFormatter(file_formatter)
     
-    # Console handler
     console_handler = logging.StreamHandler()
     console_formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     console_handler.setFormatter(console_formatter)
@@ -58,12 +56,6 @@ def check_and_reset_indices(df):
         df = df.reset_index(drop=True)
     return df
 
-def identify_column_types(df):
-    """Identify numerical and categorical columns in a DataFrame."""
-    numerical_cols = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
-    categorical_cols = df.select_dtypes(include=['object', 'bool', 'category']).columns.tolist()
-    return numerical_cols, categorical_cols
-
 def display_dataframe(df, title="DataFrame"):
     """Display a DataFrame in Streamlit with pagination."""
     st.subheader(title)
@@ -95,8 +87,8 @@ def plot_prediction_vs_actual(y_true, y_pred, title="Prediction vs Actual"):
 def set_streamlit_theme():
     """Set the Streamlit theme based on the configuration."""
     st.set_page_config(
-        page_title="Real Estate Price Prediction",
-        page_icon="🏠",
+        page_title=config.get('STREAMLIT_APP_NAME', "ML Algo Trainer"),
+        page_icon="🧠",
         layout="wide",
         initial_sidebar_state="expanded",
     )
@@ -138,24 +130,44 @@ def display_metrics(metrics):
         else:
             col2.metric(metric, f"{value:.4f}")
 
-def get_user_inputs():
-    """Get user inputs for file selection and target column."""
-    st.sidebar.header("Data Configuration")
+def get_user_inputs(mode):
+    """Get user inputs for both Training and Prediction modes."""
+    if mode == "Training":
+        return get_training_inputs()
+    else:
+        return get_prediction_inputs()
+
+def get_training_inputs():
+    """Get user inputs for Training mode."""
+    st.sidebar.header("Training Configuration")
     
-    uploaded_file = st.sidebar.file_uploader("Choose an Excel file", type="xlsx")
+    uploaded_file = st.sidebar.file_uploader("Choose a CSV or Excel file", type=["csv", "xlsx"])
     if uploaded_file is not None:
         config.update(file_path=uploaded_file)
         
-        xls = pd.ExcelFile(uploaded_file)
-        sheet_name = st.sidebar.selectbox("Select sheet", xls.sheet_names)
-        config.update(sheet_name=sheet_name)
+        if uploaded_file.name.endswith('.xlsx'):
+            xls = pd.ExcelFile(uploaded_file)
+            sheet_name = st.sidebar.selectbox("Select sheet", xls.sheet_names)
+            config.update(sheet_name=sheet_name)
         
-        if config.file_path and config.sheet_name:
-            df = pd.read_excel(config.file_path, sheet_name=config.sheet_name)
-            target_column = st.sidebar.selectbox("Select target column", df.columns)
-            config.update(target_column=target_column)
-            
-            config.set_column_types(df)
+        train_size = st.sidebar.slider("Select percentage of data for training", 0.1, 0.9, 0.8)
+        config.update(train_size=train_size)
+    
+    return config
+
+def get_prediction_inputs():
+    """Get user inputs for Prediction mode."""
+    st.sidebar.header("Prediction Configuration")
+    
+    use_saved_models = st.sidebar.radio("Use saved models?", ["Yes", "No"])
+    if use_saved_models == "No":
+        uploaded_models = st.sidebar.file_uploader("Upload trained models", type="joblib", accept_multiple_files=True)
+        uploaded_preprocessor = st.sidebar.file_uploader("Upload preprocessor", type="joblib")
+        config.update(uploaded_models=uploaded_models, uploaded_preprocessor=uploaded_preprocessor)
+    
+    new_data_file = st.sidebar.file_uploader("Choose a CSV file with new data for prediction", type="csv")
+    if new_data_file is not None:
+        config.update(new_data_file=new_data_file)
     
     return config
 
@@ -193,8 +205,6 @@ def display_data_info(df):
     st.write(f"Number of rows: {df.shape[0]}")
     st.write(f"Number of columns: {df.shape[1]}")
     st.write(f"Columns: {', '.join(df.columns)}")
-    st.write(f"Numerical columns: {', '.join(config.numerical_columns)}")
-    st.write(f"Categorical columns: {', '.join(config.categorical_columns)}")
     
     display_dataframe(df.head(), "Data Preview")
 
@@ -227,3 +237,27 @@ def handle_missing_values(df):
             st.success("Missing values have been filled with median.")
     
     return df
+
+def display_column_selection(columns):
+    """Display interface for manual column selection."""
+    st.subheader("Column Selection")
+    
+    numerical_columns = st.multiselect("Select numerical columns", columns)
+    categorical_columns = st.multiselect("Select categorical columns", columns)
+    target_column = st.selectbox("Select target column (y value)", columns)
+    
+    unused_columns = list(set(columns) - set(numerical_columns) - set(categorical_columns) - {target_column})
+    
+    st.write("Unused columns:", ", ".join(unused_columns))
+    
+    return {
+        'numerical': numerical_columns,
+        'categorical': categorical_columns,
+        'target': target_column,
+        'unused': unused_columns
+    }
+
+def save_unused_data(unused_data, file_path):
+    """Save unused data as CSV."""
+    unused_data.to_csv(file_path, index=False)
+    st.success(f"Unused data saved to {file_path}")
