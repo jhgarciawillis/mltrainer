@@ -12,7 +12,7 @@ from _2utility import (setup_logging, setup_directory, truncate_sheet_name,
                        display_dataframe, get_user_inputs, validate_file_upload, 
                        load_data, display_data_info, handle_missing_values,
                        display_column_selection, save_unused_data)
-from _3preprocessing import (load_and_preprocess_data, split_and_preprocess_data, flatten_data,
+from _3preprocessing import (load_and_preprocess_data, split_and_preprocess_data, 
                              create_global_preprocessor, save_global_preprocessor, load_global_preprocessor)
 from _4cluster import create_clusters, load_clustering_models, predict_cluster
 from _5feature import (apply_feature_generation, generate_polynomial_features, 
