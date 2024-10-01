@@ -11,37 +11,14 @@ from sklearn.preprocessing import StandardScaler, OneHotEncoder
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
-from _0config import config, MODELS_DIRECTORY, OUTLIER_THRESHOLD, TEST_SIZE, RANDOM_STATE
-from _2utility import debug_print, check_and_remove_duplicate_columns, check_and_reset_indices, identify_column_types, display_dataframe
+from _0config import config, MODELS_DIRECTORY, OUTLIER_THRESHOLD
+from _2utility import debug_print, check_and_remove_duplicate_columns, check_and_reset_indices, display_dataframe
 
-def load_and_preprocess_data(file_path, sheet_name=None):
-    debug_print("Starting data load and preprocessing from path: " + str(file_path))
-    preprocessed_data = load_data(file_path, sheet_name)
-    preprocessed_data = remove_outliers(preprocessed_data, config.numerical_columns, OUTLIER_THRESHOLD)
-    preprocessed_data = convert_to_numeric(preprocessed_data)
+def load_and_preprocess_data(data, config):
+    debug_print("Starting data preprocessing...")
+    preprocessed_data = remove_outliers(data, config.get('numerical_columns'), OUTLIER_THRESHOLD)
+    preprocessed_data = convert_to_numeric(preprocessed_data, config.get('numerical_columns'))
     return preprocessed_data
-
-@st.cache(allow_output_mutation=True)
-def load_data(file_path, sheet_name=None):
-    if isinstance(file_path, str):
-        if file_path.endswith('.xlsx'):
-            data = pd.read_excel(file_path, sheet_name=sheet_name)
-        elif file_path.endswith('.csv'):
-            data = pd.read_csv(file_path)
-        else:
-            raise ValueError("Unsupported file format. Please use .xlsx or .csv")
-    else:  # Assume it's a file-like object (e.g., from st.file_uploader)
-        if file_path.name.endswith('.xlsx'):
-            data = pd.read_excel(file_path, sheet_name=sheet_name)
-        elif file_path.name.endswith('.csv'):
-            data = pd.read_csv(file_path)
-        else:
-            raise ValueError("Unsupported file format. Please use .xlsx or .csv")
-
-    data = check_and_remove_duplicate_columns(data)
-    data = check_and_reset_indices(data)
-    debug_print(f"Initial data loaded with shape: {data.shape}")
-    return data
 
 def remove_outliers(data, columns, threshold):
     debug_print(f"Removing outliers based on Z-scores in columns: {columns}")
@@ -51,9 +28,9 @@ def remove_outliers(data, columns, threshold):
     debug_print(f"Outliers removed. Data shape changed from {initial_shape} to {data.shape}")
     return data
 
-def convert_to_numeric(df):
+def convert_to_numeric(df, numerical_columns):
     debug_print(f"Converting numerical columns to numeric type")
-    for col in config.numerical_columns:
+    for col in numerical_columns:
         df[col] = pd.to_numeric(df[col], errors='coerce')
     debug_print("Columns converted to numeric types successfully.")
     return df
@@ -83,7 +60,7 @@ def create_preprocessor_pipeline(numerical_cols, categorical_cols):
     debug_print(f"Created transformers: {transformers}")
     return ColumnTransformer(transformers=transformers, remainder='passthrough')
   
-def split_and_preprocess_data(preprocessed_data, clustered_data, target_column):
+def split_and_preprocess_data(preprocessed_data, clustered_data, target_column, train_size):
     debug_print("Splitting and preprocessing data...")
     data_splits = {}
     flattened_clustered_data = flatten_clustered_data(clustered_data)
@@ -102,11 +79,10 @@ def split_and_preprocess_data(preprocessed_data, clustered_data, target_column):
         debug_print(f"Data subset for cluster {cluster_name}, label {label} created with shape: {data_subset.shape}")
         debug_print(f"X shape: {X.shape}, y shape: {y.shape}")
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE)
+        X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=train_size, random_state=config.get('RANDOM_STATE'))
         debug_print(f"Split data for cluster {cluster_name}, label {label}: X_train shape: {X_train.shape}, X_test shape: {X_test.shape}, y_train shape: {y_train.shape}, y_test shape: {y_test.shape}")
 
-        numerical_cols, categorical_cols = identify_column_types(X_train)
-        preprocessor = create_preprocessor_pipeline(numerical_cols, categorical_cols)
+        preprocessor = create_preprocessor_pipeline(config.get('numerical_columns'), config.get('categorical_columns'))
 
         try:
             if preprocessor is None:
@@ -211,18 +187,10 @@ def flatten_clustered_data(clustered_data):
             for cluster_name, cluster_labels in clustered_data.items() 
             for label, indices in cluster_labels.items()]
 
-def flatten_data(clustered_X_train, data_splits):
-    if clustered_X_train:
-        flattened_X_train = pd.concat(list(clustered_X_train.values()))
-        flattened_y_train = pd.concat([split_data['y_train'] for split_data in data_splits.values() if 'y_train' in split_data])
-    else:
-        flattened_X_train = pd.DataFrame()
-        flattened_y_train = pd.Series()
-    return flattened_X_train, flattened_y_train
-
 def create_global_preprocessor(data):
     debug_print("Creating global preprocessor...")
-    numerical_cols, categorical_cols = identify_column_types(data)
+    numerical_cols = config.get('numerical_columns')
+    categorical_cols = config.get('categorical_columns')
     all_cols = numerical_cols + categorical_cols
     
     debug_print(f"Numerical columns: {numerical_cols}")
