@@ -2,7 +2,9 @@ import pandas as pd
 import numpy as np
 import streamlit as st
 import plotly.graph_objects as go
-from _0config import config
+import joblib
+import os
+from _0config import config, MODELS_DIRECTORY
 from _2utility import debug_print, plot_prediction_vs_actual
 from _7metrics import calculate_metrics, display_metrics, plot_residuals
 
@@ -208,3 +210,13 @@ def evaluate_predictions(y_true, y_pred):
     display_metrics(metrics)
     plot_prediction_vs_actual(y_true, y_pred)
     plot_residuals(y_true, y_pred)
+
+def load_saved_models(models_directory):
+    """Load all saved models from the specified directory."""
+    saved_models = {}
+    for filename in os.listdir(models_directory):
+        if filename.endswith('.joblib'):
+            model_path = os.path.join(models_directory, filename)
+            model_name = filename.replace('.joblib', '')
+            saved_models[model_name] = joblib.load(model_path)
+    return saved_models
