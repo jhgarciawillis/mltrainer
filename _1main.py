@@ -6,7 +6,7 @@ import traceback
 
 from _0config import (config, MODELS_DIRECTORY, PREDICTIONS_PATH, AVAILABLE_CLUSTERING_METHODS,
                       MODEL_CLASSES, LOG_FILE, GITHUB_USERNAME, GITHUB_REPOSITORY, STREAMLIT_APP_NAME,
-                      STREAMLIT_APP_URL)
+                      STREAMLIT_APP_URL, STREAMLIT_APP_ICON)
 from _2utility import (setup_logging, setup_directory, truncate_sheet_name, 
                        check_and_remove_duplicate_columns, check_and_reset_indices, 
                        display_dataframe, get_user_inputs, validate_file_upload, 
@@ -28,7 +28,7 @@ from _8prediction import PredictionProcessor, load_saved_models, predict_for_new
 logger = setup_logging(LOG_FILE)
 
 def main():
-    st.set_page_config(page_title=STREAMLIT_APP_NAME, page_icon="🧠", layout="wide")
+    st.set_page_config(page_title=STREAMLIT_APP_NAME, page_icon=STREAMLIT_APP_ICON, layout="wide")
     st.title(STREAMLIT_APP_NAME)
 
     st.sidebar.write(f"Application URL: [{STREAMLIT_APP_NAME}]({STREAMLIT_APP_URL})")
