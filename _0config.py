@@ -1,8 +1,4 @@
 import os
-from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor
-from sklearn.neighbors import KNeighborsRegressor
-from xgboost import XGBRegressor
-from lightgbm import LGBMRegressor
 
 # Define the base directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -21,7 +17,6 @@ TRUNCATE_SHEET_NAME_REPLACEMENT = "_cluster_db"
 
 # Data processing parameters
 OUTLIER_THRESHOLD = 3
-TEST_SIZE = 0.2
 RANDOM_STATE = 42
 
 # Clustering parameters
@@ -47,6 +42,7 @@ MODEL_CLASSES = {
     'xgb': XGBRegressor,
     'lgbm': LGBMRegressor,
     'ada': AdaBoostRegressor,
+    'catboost': CatBoostRegressor,
     'knn': KNeighborsRegressor
 }
 
@@ -71,6 +67,11 @@ HYPERPARAMETER_GRIDS = {
         'n_estimators': [50, 100, 200],
         'learning_rate': [0.01, 0.1, 1.0]
     },
+    'catboost': {
+        'iterations': [100, 200, 300],
+        'learning_rate': [0.01, 0.1, 0.2],
+        'depth': [4, 6, 8]
+    },
     'knn': {
         'n_neighbors': [3, 5, 7],
         'weights': ['uniform', 'distance'],
@@ -93,6 +94,12 @@ STREAMLIT_THEME = {
     'font': 'sans serif'
 }
 
+# GitHub and Streamlit configurations
+GITHUB_USERNAME = 'your-github-username'
+GITHUB_REPOSITORY = 'your-github-repository'
+STREAMLIT_APP_NAME = 'ML Algo Trainer'
+STREAMLIT_APP_URL = f'https://share.streamlit.io/{ GITHUB_USERNAME }/{ GITHUB_REPOSITORY }/main'
+
 # File upload configurations
 ALLOWED_EXTENSIONS = ['csv', 'xlsx']
 MAX_FILE_SIZE = 200 * 1024 * 1024  # 200 MB
@@ -102,31 +109,41 @@ MAX_ROWS_TO_DISPLAY = 100
 CHART_HEIGHT = 400
 CHART_WIDTH = 600
 
-# Dynamic column identification function
-def identify_column_types(df):
-    numerical_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
-    categorical_cols = df.select_dtypes(include=['object', 'category', 'bool']).columns.tolist()
-    return numerical_cols, categorical_cols
+def get_default_config():
+    return {
+        'file_path': None,
+        'sheet_name': None,
+        'target_column': None,
+        'numerical_columns': [],
+        'categorical_columns': [],
+        'unused_columns': [],
+        'clustering_method': 'KMeans',
+        'clustering_parameters': KMEANS_PARAMETERS,
+        'train_test_split': 0.2
+    }
 
-# Configuration class for dynamic settings
 class Config:
     def __init__(self):
         self.file_path = None
         self.sheet_name = None
         self.target_column = None
-        self.numerical_columns = None
-        self.categorical_columns = None
+        self.numerical_columns = []
+        self.categorical_columns = []
+        self.unused_columns = []
+        self.clustering_method = 'KMeans'
+        self.clustering_parameters = KMEANS_PARAMETERS
+        self.train_test_split = 0.2
 
-    def update(self, file_path=None, sheet_name=None, target_column=None):
-        if file_path:
-            self.file_path = file_path
-        if sheet_name:
-            self.sheet_name = sheet_name
-        if target_column:
-            self.target_column = target_column
+    def update(self, **kwargs):
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
 
-    def set_column_types(self, df):
-        self.numerical_columns, self.categorical_columns = identify_column_types(df)
+    def set_column_types(self, numerical, categorical, unused, target):
+        self.numerical_columns = numerical
+        self.categorical_columns = categorical
+        self.unused_columns = unused
+        self.target_column = target
 
 # Initialize global configuration
 config = Config()
