@@ -239,3 +239,11 @@ def display_model_performance(all_evaluation_metrics):
             for metric_name, metric_value in metrics.items():
                 st.write(f"  {metric_name}: {metric_value:.4f}")
         st.write("---")
+
+def save_trained_models(all_models, save_path):
+    """Save all trained models to the specified directory."""
+    for cluster_name, models in all_models.items():
+        for model_name, model in models.items():
+            filename = f"{cluster_name}_{model_name}"
+            save_model(model, filename, save_path)
+    st.success("All trained models saved successfully.")
