@@ -1,4 +1,9 @@
 import os
+from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor
+from xgboost import XGBRegressor
+from lightgbm import LGBMRegressor
+from catboost import CatBoostRegressor
+from sklearn.neighbors import KNeighborsRegressor
 
 # Define the base directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -99,6 +104,7 @@ GITHUB_USERNAME = 'your-github-username'
 GITHUB_REPOSITORY = 'your-github-repository'
 STREAMLIT_APP_NAME = 'ML Algo Trainer'
 STREAMLIT_APP_URL = f'https://share.streamlit.io/{ GITHUB_USERNAME }/{ GITHUB_REPOSITORY }/main'
+STREAMLIT_APP_ICON = 'brain.png'
 
 # File upload configurations
 ALLOWED_EXTENSIONS = ['csv', 'xlsx']
