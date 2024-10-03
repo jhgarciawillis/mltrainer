@@ -1,6 +1,8 @@
-import streamlit as st
+import os
 import pandas as pd
-from _0config import config
+import streamlit as st
+from _0config import config, SHEET_NAME_MAX_LENGTH, TRUNCATE_SHEET_NAME_REPLACEMENT
+from _2misc_utils import debug_print, plot_prediction_vs_actual, plot_residuals
 
 def load_data(file_path, sheet_name=None):
     """Load data from Excel or CSV file."""
@@ -14,7 +16,6 @@ def load_data(file_path, sheet_name=None):
     else:
         st.error("Unsupported file format.")
         return None
-    
     return df
 
 def display_data_info(df):
@@ -34,7 +35,7 @@ def handle_missing_values(df):
         st.write(missing_values[missing_values > 0])
         
         strategy = st.selectbox("Choose a strategy to handle missing values:", 
-                                ["Drop rows", "Fill with mean/mode", "Fill with median"])
+                               ["Drop rows", "Fill with mean/mode", "Fill with median"])
         
         if strategy == "Drop rows":
             df = df.dropna()
@@ -109,4 +110,4 @@ def display_column_selection(columns, initial_types):
 def save_unused_data(unused_data, file_path):
     """Save unused data as CSV."""
     unused_data.to_csv(file_path, index=False)
-    st.success(f"Unused data saved to {file_path}")
+    debug_print(f"Unused data saved to {file_path}")
