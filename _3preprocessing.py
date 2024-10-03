@@ -16,8 +16,8 @@ from _2utility import debug_print, check_and_remove_duplicate_columns, check_and
 
 def load_and_preprocess_data(data, config):
     debug_print("Starting data preprocessing...")
-    preprocessed_data = remove_outliers(data, config.get('numerical_columns'), OUTLIER_THRESHOLD)
-    preprocessed_data = convert_to_numeric(preprocessed_data, config.get('numerical_columns'))
+    preprocessed_data = remove_outliers(data, config.numerical_columns, OUTLIER_THRESHOLD)
+    preprocessed_data = convert_to_numeric(preprocessed_data, config.numerical_columns)
     return preprocessed_data
 
 def remove_outliers(data, columns, threshold):
@@ -79,10 +79,10 @@ def split_and_preprocess_data(preprocessed_data, clustered_data, target_column, 
         debug_print(f"Data subset for cluster {cluster_name}, label {label} created with shape: {data_subset.shape}")
         debug_print(f"X shape: {X.shape}, y shape: {y.shape}")
 
-        X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=train_size, random_state=config.get('RANDOM_STATE'))
+        X_train, X_test, y_train, y_test = train_test_split(X, y, train_size=train_size, random_state=config.RANDOM_STATE)
         debug_print(f"Split data for cluster {cluster_name}, label {label}: X_train shape: {X_train.shape}, X_test shape: {X_test.shape}, y_train shape: {y_train.shape}, y_test shape: {y_test.shape}")
 
-        preprocessor = create_preprocessor_pipeline(config.get('numerical_columns'), config.get('categorical_columns'))
+        preprocessor = create_preprocessor_pipeline(config.numerical_columns, config.categorical_columns)
 
         try:
             if preprocessor is None:
@@ -189,8 +189,8 @@ def flatten_clustered_data(clustered_data):
 
 def create_global_preprocessor(data):
     debug_print("Creating global preprocessor...")
-    numerical_cols = config.get('numerical_columns')
-    categorical_cols = config.get('categorical_columns')
+    numerical_cols = config.numerical_columns
+    categorical_cols = config.categorical_columns
     all_cols = numerical_cols + categorical_cols
     
     debug_print(f"Numerical columns: {numerical_cols}")
