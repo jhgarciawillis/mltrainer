@@ -10,7 +10,7 @@ from _2utility import (setup_logging, setup_directory, truncate_sheet_name,
                        check_and_remove_duplicate_columns, check_and_reset_indices, 
                        display_dataframe, get_user_inputs, validate_file_upload, 
                        load_data, display_data_info, handle_missing_values,
-                       display_column_selection, save_unused_data)
+                       display_column_selection, save_unused_data, auto_detect_column_types)
 from _3preprocessing import (load_and_preprocess_data, split_and_preprocess_data, 
                              create_global_preprocessor, save_global_preprocessor, load_global_preprocessor)
 from _4cluster import create_clusters, load_clustering_models, predict_cluster
@@ -51,8 +51,14 @@ def run_training_mode(user_config):
             st.write("Data loaded successfully.")
             display_data_info(data)
 
+            # Auto-detect column types
+            initial_types = auto_detect_column_types(data)
+
             # Manual column selection
-            selected_columns = display_column_selection(data.columns)
+            selected_columns = display_column_selection(data.columns, initial_types)
+            if selected_columns is None:
+                return
+
             config.update(
                 numerical_columns=selected_columns['numerical'],
                 categorical_columns=selected_columns['categorical'],
