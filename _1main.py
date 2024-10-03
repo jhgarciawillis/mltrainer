@@ -1,22 +1,14 @@
 import streamlit as st
-import os
-import joblib
-import pandas as pd
-import traceback
 
-from _0config import (config, MODELS_DIRECTORY, PREDICTIONS_PATH, AVAILABLE_CLUSTERING_METHODS,
-                      MODEL_CLASSES, LOG_FILE, STREAMLIT_APP_NAME, STREAMLIT_APP_ICON)
 from _2data_utils import load_data, display_data_info, handle_missing_values, auto_detect_column_types, display_column_selection, save_unused_data
 from _2ui_utils import set_streamlit_theme, display_metrics, get_user_inputs, get_training_inputs, display_clustering_options, select_2d_clustering_columns, get_prediction_inputs
 from _2misc_utils import debug_print, validate_file_upload
-from _3preprocessing import (load_and_preprocess_data, split_and_preprocess_data, 
-                             create_global_preprocessor, save_global_preprocessor, load_global_preprocessor)
+
+from _3preprocessing import load_and_preprocess_data, split_and_preprocess_data, create_global_preprocessor, save_global_preprocessor, load_global_preprocessor
 from _4cluster import create_clusters, load_clustering_models, predict_cluster
-from _5feature import (apply_feature_generation, generate_polynomial_features, 
-                       generate_interaction_terms, generate_statistical_features, 
+from _5feature import (apply_feature_generation, generate_polynomial_features, generate_interaction_terms, generate_statistical_features,
                        combine_feature_engineered_data, generate_features_for_prediction)
-from _6training import (train_and_validate_models, create_ensemble_model, 
-                        train_models_on_flattened_data, load_trained_models, predict_with_model,
+from _6training import (train_and_validate_models, create_ensemble_model, train_models_on_flattened_data, load_trained_models, predict_with_model,
                         save_trained_models)
 from _7metrics import calculate_metrics, display_metrics, plot_residuals, plot_actual_vs_predicted
 from _8prediction import PredictionProcessor, load_saved_models, predict_for_new_data
@@ -25,8 +17,8 @@ from _8prediction import PredictionProcessor, load_saved_models, predict_for_new
 logger = setup_logging(LOG_FILE)
 
 def main():
-    st.set_page_config(page_title=STREAMLIT_APP_NAME, page_icon=STREAMLIT_APP_ICON, layout="wide")
-    st.title(STREAMLIT_APP_NAME)
+    set_streamlit_theme()
+    st.title("ML Algo Trainer")
 
     # Mode selection
     mode = st.radio("Select Mode", ["Training", "Prediction"])
