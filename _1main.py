@@ -6,11 +6,9 @@ import traceback
 
 from _0config import (config, MODELS_DIRECTORY, PREDICTIONS_PATH, AVAILABLE_CLUSTERING_METHODS,
                       MODEL_CLASSES, LOG_FILE, STREAMLIT_APP_NAME, STREAMLIT_APP_ICON)
-from _2utility import (setup_logging, setup_directory, truncate_sheet_name, 
-                       check_and_remove_duplicate_columns, check_and_reset_indices, 
-                       display_dataframe, get_user_inputs, validate_file_upload, 
-                       load_data, display_data_info, handle_missing_values,
-                       display_column_selection, save_unused_data, auto_detect_column_types)
+from _2data_utils import load_data, display_data_info, handle_missing_values, auto_detect_column_types, display_column_selection, save_unused_data
+from _2ui_utils import set_streamlit_theme, display_metrics, get_user_inputs, get_training_inputs, display_clustering_options, select_2d_clustering_columns, get_prediction_inputs
+from _2misc_utils import debug_print, validate_file_upload
 from _3preprocessing import (load_and_preprocess_data, split_and_preprocess_data, 
                              create_global_preprocessor, save_global_preprocessor, load_global_preprocessor)
 from _4cluster import create_clusters, load_clustering_models, predict_cluster
