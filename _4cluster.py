@@ -157,21 +157,3 @@ def predict_cluster(data_point, cluster_models, clustering_config, clustering_2d
             clusters[column_pair] = 'unknown'
     
     return clusters
-
-def display_cluster_info(clustered_data):
-    st.subheader("Cluster Information")
-    for column, cluster_labels in clustered_data.items():
-        st.write(f"Column: {column}")
-        for label, indices in cluster_labels.items():
-            st.write(f"  Label {label}: {len(indices)} data points")
-        st.write("---")
-
-def plot_cluster_distributions(preprocessed_data, clustered_data):
-    st.subheader("Cluster Distributions")
-    for column, cluster_labels in clustered_data.items():
-        st.write(f"Column: {column}")
-        cluster_data = preprocessed_data.loc[np.concatenate(list(cluster_labels.values()))]
-        fig = px.histogram(cluster_data, x=column, color=cluster_data.index.map(lambda x: next(label for label, indices in cluster_labels.items() if x in indices)),
-                           title=f"Distribution of {column} in clusters")
-        st.plotly_chart(fig)
-        st.write("---")
