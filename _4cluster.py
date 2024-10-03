@@ -3,22 +3,31 @@ import pandas as pd
 import streamlit as st
 from sklearn.cluster import DBSCAN, KMeans
 from sklearn.preprocessing import StandardScaler
+import joblib
+import os
 from _0config import config, CLUSTERS_PATH, MODELS_DIRECTORY
 from _2utility import debug_print
 
-def create_clusters(preprocessed_data, clustering_methods, clustering_parameters):
+def create_clusters(preprocessed_data, clustering_config):
     st.write("Creating clusters...")
     debug_print("Entering create_clusters function.")
     
     clustered_data = {}
+    cluster_models = {}
     
-    for column, method in clustering_methods.items():
+    for column, config in clustering_config.items():
+        method = config['method']
+        params = config['params']
+        
         if method == 'None':
             clustered_data[column] = {'label_0': preprocessed_data.index}
         elif method == 'DBSCAN':
-            clustered_data[column] = perform_dbscan_clustering(preprocessed_data[column], clustering_parameters['DBSCAN'])
+            clustered_data[column], cluster_models[column] = perform_dbscan_clustering(preprocessed_data[column], params)
         elif method == 'KMeans':
-            clustered_data[column] = perform_kmeans_clustering(preprocessed_data[column], clustering_parameters['KMeans'])
+            clustered_data[column], cluster_models[column] = perform_kmeans_clustering(preprocessed_data[column], params)
+    
+    # Save cluster models
+    save_clustering_models(cluster_models, MODELS_DIRECTORY)
     
     return clustered_data
 
@@ -39,7 +48,7 @@ def perform_dbscan_clustering(data, parameters):
     st.write(f"DBSCAN clustering done. Number of clusters: {len(unique_labels)}")
     
     clusters = {f'label_{label}': data.index[cluster_labels == label].tolist() for label in unique_labels}
-    return clusters
+    return clusters, dbscan
 
 def perform_kmeans_clustering(data, parameters):
     st.write(f"Performing KMeans clustering")
@@ -58,7 +67,7 @@ def perform_kmeans_clustering(data, parameters):
     st.write(f"KMeans clustering done. Number of clusters: {len(unique_labels)}")
     
     clusters = {f'label_{label}': data.index[cluster_labels == label].tolist() for label in unique_labels}
-    return clusters
+    return clusters, kmeans
 
 def save_clustering_models(cluster_models, save_path):
     """Save clustering models to the specified directory."""
@@ -76,18 +85,22 @@ def load_clustering_models(models_directory):
             cluster_models[column] = joblib.load(model_path)
     return cluster_models
 
-def predict_cluster(data_point, cluster_models, clustering_methods):
+def predict_cluster(data_point, cluster_models, clustering_config):
     clusters = {}
-    for column, model in cluster_models.items():
-        method = clustering_methods[column]
+    for column, config in clustering_config.items():
+        method = config['method']
         if method == 'None':
             clusters[column] = 'label_0'
-        elif method == 'DBSCAN':
-            cluster = model.fit_predict(data_point[column].values.reshape(1, -1))
-            clusters[column] = f'label_{cluster[0]}'
-        elif method == 'KMeans':
-            cluster = model.predict(data_point[column].values.reshape(1, -1))
-            clusters[column] = f'label_{cluster[0]}'
+        elif column in cluster_models:
+            model = cluster_models[column]
+            if isinstance(model, DBSCAN):
+                cluster = model.fit_predict(data_point[column].values.reshape(1, -1))
+                clusters[column] = f'label_{cluster[0]}'
+            elif isinstance(model, KMeans):
+                cluster = model.predict(data_point[column].values.reshape(1, -1))
+                clusters[column] = f'label_{cluster[0]}'
+        else:
+            clusters[column] = 'unknown'
     return clusters
 
 def display_cluster_info(clustered_data):
