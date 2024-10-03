@@ -191,6 +191,8 @@ def display_clustering_options():
     """Display options for clustering configuration."""
     st.subheader("Clustering Configuration")
     
+    # 1D Clustering
+    st.write("1D Clustering Options:")
     for col in config.numerical_columns:
         method = st.selectbox(f"Select clustering method for {col}", AVAILABLE_CLUSTERING_METHODS, key=f"cluster_method_{col}")
         if method != 'None':
@@ -204,6 +206,37 @@ def display_clustering_options():
             config.clustering_config[col] = {'method': method, 'params': params}
         else:
             config.clustering_config[col] = {'method': 'None', 'params': {}}
+    
+    # 2D Clustering
+    st.write("2D Clustering Options:")
+    col_pairs = select_2d_clustering_columns()
+    for pair in col_pairs:
+        method = st.selectbox(f"Select clustering method for {pair}", AVAILABLE_CLUSTERING_METHODS, key=f"cluster_method_{pair}")
+        if method != 'None':
+            if method == 'DBSCAN':
+                eps = st.slider(f"DBSCAN eps for {pair}", 0.1, 1.0, DBSCAN_PARAMETERS['eps'], key=f"dbscan_eps_{pair}")
+                min_samples = st.slider(f"DBSCAN min_samples for {pair}", 2, 10, DBSCAN_PARAMETERS['min_samples'], key=f"dbscan_min_samples_{pair}")
+                params = {'eps': eps, 'min_samples': min_samples}
+            elif method == 'KMeans':
+                n_clusters = st.slider(f"KMeans n_clusters for {pair}", 2, 10, KMEANS_PARAMETERS['n_clusters'], key=f"kmeans_n_clusters_{pair}")
+                params = {'n_clusters': n_clusters}
+            config.set_2d_clustering([pair], method, params)
+
+def select_2d_clustering_columns():
+    """Allow users to select pairs of columns for 2D clustering."""
+    st.write("Select column pairs for 2D clustering:")
+    col_pairs = []
+    num_pairs = st.number_input("Number of column pairs for 2D clustering", min_value=0, max_value=len(config.numerical_columns)//2, value=0)
+    
+    for i in range(num_pairs):
+        col1 = st.selectbox(f"Select first column for pair {i+1}", config.numerical_columns, key=f"2d_cluster_col1_{i}")
+        col2 = st.selectbox(f"Select second column for pair {i+1}", config.numerical_columns, key=f"2d_cluster_col2_{i}")
+        if col1 != col2:
+            col_pairs.append((col1, col2))
+        else:
+            st.warning(f"Pair {i+1}: Please select different columns.")
+    
+    return col_pairs
 
 def get_prediction_inputs():
     """Get user inputs for Prediction mode."""
