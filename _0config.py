@@ -1,158 +1,148 @@
-import streamlit as st
 import os
-import joblib
-import pandas as pd
-import traceback
+from sklearn.ensemble import RandomForestRegressor, AdaBoostRegressor
+from xgboost import XGBRegressor
+from lightgbm import LGBMRegressor
+from catboost import CatBoostRegressor
+from sklearn.neighbors import KNeighborsRegressor
 
-from _0config import (config, MODELS_DIRECTORY, PREDICTIONS_PATH, AVAILABLE_CLUSTERING_METHODS,
-                      MODEL_CLASSES, LOG_FILE, STREAMLIT_APP_NAME, STREAMLIT_APP_ICON)
-from _2utility import (setup_logging, setup_directory, truncate_sheet_name, 
-                       check_and_remove_duplicate_columns, check_and_reset_indices, 
-                       display_dataframe, get_user_inputs, validate_file_upload, 
-                       load_data, display_data_info, handle_missing_values,
-                       display_column_selection, save_unused_data)
-from _3preprocessing import (load_and_preprocess_data, split_and_preprocess_data, 
-                             create_global_preprocessor, save_global_preprocessor, load_global_preprocessor)
-from _4cluster import create_clusters, load_clustering_models, predict_cluster
-from _5feature import (apply_feature_generation, generate_polynomial_features, 
-                       generate_interaction_terms, generate_statistical_features, 
-                       combine_feature_engineered_data, generate_features_for_prediction)
-from _6training import (train_and_validate_models, create_ensemble_model, 
-                        train_models_on_flattened_data, load_trained_models, predict_with_model,
-                        save_trained_models)
-from _7metrics import calculate_metrics, display_metrics, plot_residuals, plot_actual_vs_predicted
-from _8prediction import PredictionProcessor, load_saved_models, predict_for_new_data
+# Define the base directory
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Initialize logger
-logger = setup_logging(LOG_FILE)
+# File paths and names
+DATA_PATH = os.path.join(BASE_DIR, "Data.xlsx")
+PREDICTIONS_PATH = os.path.join(BASE_DIR, "Predictions.xlsx")
+LOG_FILE = os.path.join(BASE_DIR, "app.log")
+MODELS_DIRECTORY = os.path.join(BASE_DIR, "Trained")
+CLUSTERS_PATH = os.path.join(BASE_DIR, "Clusters.joblib")
+GLOBAL_STATS_PATH = os.path.join(BASE_DIR, "global_stats.joblib")
 
-def main():
-    st.set_page_config(page_title=STREAMLIT_APP_NAME, page_icon=STREAMLIT_APP_ICON, layout="wide")
-    st.title(STREAMLIT_APP_NAME)
+# Sheet name configuration
+SHEET_NAME_MAX_LENGTH = 31
+TRUNCATE_SHEET_NAME_REPLACEMENT = "_cluster_db"
 
-    # Mode selection
-    mode = st.radio("Select Mode", ["Training", "Prediction"])
+# Data processing parameters
+OUTLIER_THRESHOLD = 3
+RANDOM_STATE = 42
 
-    # Get user inputs based on the selected mode
-    user_config = get_user_inputs(mode)
+# Clustering parameters
+AVAILABLE_CLUSTERING_METHODS = ['DBSCAN', 'KMeans']
+DBSCAN_PARAMETERS = {
+    'eps': 0.5,
+    'min_samples': 5
+}
+KMEANS_PARAMETERS = {
+    'n_clusters': 5
+}
 
-    if mode == "Training":
-        run_training_mode(user_config)
-    else:
-        run_prediction_mode(user_config)
+# Feature engineering parameters
+STATISTICAL_AGG_FUNCTIONS = ['mean', 'median', 'std']
+TOP_K_FEATURES = 20
+MAX_INTERACTION_DEGREE = 2
+POLYNOMIAL_DEGREE = 2
+FEATURE_SELECTION_SCORE_FUNC = 'f_regression'
 
-def run_training_mode(user_config):
-    st.header("Training Mode")
+# Model configurations
+MODEL_CLASSES = {
+    'rf': RandomForestRegressor,
+    'xgb': XGBRegressor,
+    'lgbm': LGBMRegressor,
+    'ada': AdaBoostRegressor,
+    'catboost': CatBoostRegressor,
+    'knn': KNeighborsRegressor
+}
 
-    if user_config.file_path is not None:
-        try:
-            # Load data
-            data = load_data(user_config.file_path, user_config.sheet_name)
-            st.write("Data loaded successfully.")
-            display_data_info(data)
+# Hyperparameter grids
+HYPERPARAMETER_GRIDS = {
+    'rf': {
+        'n_estimators': [100, 200, 300],
+        'max_depth': [10, 20, None],
+        'min_samples_split': [2, 5, 10]
+    },
+    'xgb': {
+        'n_estimators': [100, 200, 300],
+        'learning_rate': [0.01, 0.1, 0.2],
+        'max_depth': [3, 6, 9]
+    },
+    'lgbm': {
+        'n_estimators': [100, 200, 300],
+        'learning_rate': [0.01, 0.1, 0.2],
+        'num_leaves': [31, 62, 124]
+    },
+    'ada': {
+        'n_estimators': [50, 100, 200],
+        'learning_rate': [0.01, 0.1, 1.0]
+    },
+    'catboost': {
+        'iterations': [100, 200, 300],
+        'learning_rate': [0.01, 0.1, 0.2],
+        'depth': [4, 6, 8]
+    },
+    'knn': {
+        'n_neighbors': [3, 5, 7],
+        'weights': ['uniform', 'distance'],
+        'algorithm': ['auto', 'ball_tree', 'kd_tree', 'brute']
+    }
+}
 
-            # Manual column selection
-            selected_columns = display_column_selection(data.columns)
-            config.update(
-                numerical_columns=selected_columns['numerical'],
-                categorical_columns=selected_columns['categorical'],
-                target_column=selected_columns['target'],
-                unused_columns=selected_columns['unused']
-            )
+# Model training parameters
+MODEL_CV_SPLITS = 5
+RANDOMIZED_SEARCH_ITERATIONS = 10
+ENSEMBLE_CV_SPLITS = 10
+ENSEMBLE_CV_SHUFFLE = True
 
-            if st.button("Start Training"):
-                with st.spinner("Training in progress..."):
-                    # Preprocess data
-                    preprocessed_data = load_and_preprocess_data(data, config)
-                    
-                    # Create clusters
-                    clustering_config = {
-                        'method': user_config.clustering_method,
-                        'params': user_config.clustering_parameters,
-                        'columns': config.get('numerical_columns')
-                    }
-                    clustered_data = create_clusters(preprocessed_data, clustering_config)
-                    
-                    # Split and preprocess data
-                    data_splits = split_and_preprocess_data(preprocessed_data, clustered_data, config.get('target_column'), user_config.train_size)
-                    
-                    # Generate features
-                    feature_generation_functions = []
-                    if user_config.use_polynomial_features:
-                        feature_generation_functions.append(generate_polynomial_features)
-                    if user_config.use_interaction_terms:
-                        feature_generation_functions.append(generate_interaction_terms)
-                    if user_config.use_statistical_features:
-                        feature_generation_functions.append(generate_statistical_features)
-                    
-                    clustered_X_train_combined, clustered_X_test_combined = apply_feature_generation(
-                        data_splits, feature_generation_functions
-                    )
-                    
-                    # Train models
-                    all_models, ensemble_cv_results, all_evaluation_metrics = train_and_validate_models(
-                        data_splits, clustered_X_train_combined, clustered_X_test_combined, 
-                        user_config.models_to_use, user_config.tuning_method
-                    )
-                    
-                    # Save models and unused data
-                    save_trained_models(all_models, MODELS_DIRECTORY)
-                    save_unused_data(data_splits['unused_data'], os.path.join(MODELS_DIRECTORY, "unused_data.csv"))
-                    
-                    st.success("Training completed successfully!")
-                    
-                    # Display evaluation metrics
-                    st.subheader("Evaluation Metrics")
-                    for cluster_name, metrics in all_evaluation_metrics.items():
-                        st.write(f"Cluster: {cluster_name}")
-                        for model_name, model_metrics in metrics.items():
-                            st.write(f"Model: {model_name}")
-                            st.table(pd.DataFrame(model_metrics, index=[0]))
+# Streamlit configurations
+STREAMLIT_THEME = {
+    'primaryColor': '#FF4B4B',
+    'backgroundColor': '#FFFFFF',
+    'secondaryBackgroundColor': '#F0F2F6',
+    'textColor': '#262730',
+    'font': 'sans serif'
+}
 
-        except Exception as e:
-            logger.error(f"An error occurred: {str(e)}")
-            logger.error(traceback.format_exc())
-            st.error(f"An error occurred: {str(e)}")
-            st.error("Check the log file for more details.")
+# Streamlit configurations
+STREAMLIT_APP_NAME = 'ML Algo Trainer'
+STREAMLIT_APP_ICON = '🧠'
 
-def run_prediction_mode(user_config):
-    st.header("Prediction Mode")
+# File upload configurations
+ALLOWED_EXTENSIONS = ['csv', 'xlsx']
+MAX_FILE_SIZE = 200 * 1024 * 1024  # 200 MB
 
-    if user_config.use_saved_models == "Yes":
-        # Load saved models and preprocessors
-        with st.spinner("Loading saved models and preprocessors..."):
-            all_models = load_saved_models(MODELS_DIRECTORY)
-            global_preprocessor = load_global_preprocessor(MODELS_DIRECTORY)
-            cluster_models = load_clustering_models(MODELS_DIRECTORY)
-            st.success("Models and preprocessors loaded successfully.")
-    else:
-        # Use uploaded models and preprocessors
-        if user_config.uploaded_models and user_config.uploaded_preprocessor:
-            all_models = {model.name: joblib.load(model) for model in user_config.uploaded_models}
-            global_preprocessor = joblib.load(user_config.uploaded_preprocessor)
-            st.success("Uploaded models and preprocessor loaded successfully.")
-        else:
-            st.warning("Please upload all required files.")
-            return
+# Visualization configurations
+MAX_ROWS_TO_DISPLAY = 100
+CHART_HEIGHT = 400
+CHART_WIDTH = 600
 
-    # Make predictions using the new data file
-    if user_config.new_data_file is not None:
-        new_data = pd.read_csv(user_config.new_data_file)
-        st.write("New data shape:", new_data.shape)
+class Config:
+    def __init__(self):
+        self.file_path = None
+        self.sheet_name = None
+        self.target_column = None
+        self.numerical_columns = []
+        self.categorical_columns = []
+        self.unused_columns = []
+        self.clustering_method = 'KMeans'
+        self.clustering_parameters = KMEANS_PARAMETERS
+        self.train_size = 0.8
+        self.models_to_use = []
+        self.tuning_method = 'None'
+        self.use_polynomial_features = True
+        self.use_interaction_terms = True
+        self.use_statistical_features = True
+        self.use_saved_models = 'Yes'
+        self.uploaded_models = None
+        self.uploaded_preprocessor = None
+        self.new_data_file = None
 
-        # Make predictions
-        with st.spinner("Generating predictions..."):
-            predictions = predict_for_new_data(all_models, new_data, cluster_models)
-            st.write("Predictions:")
-            st.dataframe(predictions)
+    def update(self, **kwargs):
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
 
-            # Calculate and display metrics if target column is available
-            if config.get('target_column') in new_data.columns:
-                metrics = calculate_metrics(new_data[config.get('target_column')], predictions['Prediction'])
-                st.subheader("Prediction Metrics")
-                st.table(pd.DataFrame(metrics, index=[0]))
+    def set_column_types(self, numerical, categorical, unused, target):
+        self.numerical_columns = numerical
+        self.categorical_columns = categorical
+        self.unused_columns = unused
+        self.target_column = target
 
-        st.success("Predictions generated successfully!")
-
-if __name__ == "__main__":
-    main()
+# Initialize global configuration
+config = Config()
