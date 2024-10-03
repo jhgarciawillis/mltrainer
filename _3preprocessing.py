@@ -12,7 +12,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
 from _0config import config, MODELS_DIRECTORY, OUTLIER_THRESHOLD
-from _2misc_utils import debug_print, check_and_remove_duplicate_columns, check_and_reset_indices
+from _2misc_utils import debug_print, flatten_clustered_data
 
 def load_and_preprocess_data(data, config):
     debug_print("Starting data preprocessing...")
@@ -230,17 +230,3 @@ def load_global_preprocessor(save_path):
     preprocessor = joblib.load(os.path.join(save_path, 'global_preprocessor.joblib'))
     debug_print("Global preprocessor loaded successfully.")
     return preprocessor
-
-def display_preprocessed_data(preprocessed_data):
-    st.subheader("Preprocessed Data")
-    display_dataframe(preprocessed_data)
-
-def display_data_splits(data_splits):
-    st.subheader("Data Splits")
-    for cluster_name, split_data in data_splits.items():
-        st.write(f"Cluster: {cluster_name}")
-        st.write(f"X_train shape: {split_data['X_train'].shape}")
-        st.write(f"X_test shape: {split_data['X_test'].shape}")
-        st.write(f"y_train shape: {split_data['y_train'].shape}")
-        st.write(f"y_test shape: {split_data['y_test'].shape}")
-        st.write("---")
