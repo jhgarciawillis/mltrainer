@@ -163,28 +163,28 @@ def display_predictions(predictions, actual_values=None):
         plot_prediction_vs_actual(actual_values, predictions)
         plot_residuals(actual_values, predictions)
 
-def predict_for_new_data(models, new_data, cluster_models):
+def predict_for_new_data(models, new_data, cluster_models, clustering_methods, clustering_parameters):
     st.subheader("Predictions for New Data")
     
     predictions = []
     for index, row in new_data.iterrows():
-        cluster_name, cluster_label = predict_cluster(row, cluster_models)
-        model_key = f"{cluster_name}_{cluster_label}"
+        clusters = predict_cluster(row, cluster_models, clustering_methods)
         
-        if model_key in models:
-            model = models[model_key]
+        # Combine all cluster labels to form a unique identifier
+        cluster_key = "_".join([f"{col}_{label}" for col, label in clusters.items()])
+        
+        if cluster_key in models:
+            model = models[cluster_key]
             prediction = make_predictions(model, row.to_frame().T)
             predictions.append({
                 "Index": index,
-                "Cluster": cluster_name,
-                "Label": cluster_label,
+                "Clusters": clusters,
                 "Prediction": prediction[0]
             })
         else:
             predictions.append({
                 "Index": index,
-                "Cluster": cluster_name,
-                "Label": cluster_label,
+                "Clusters": clusters,
                 "Prediction": "No model available"
             })
     
@@ -194,16 +194,22 @@ def predict_for_new_data(models, new_data, cluster_models):
     
     return predictions_df
 
-def predict_cluster(data_point, cluster_models):
-    for model_name, model in cluster_models.items():
-        if 'dbscan' in model_name.lower():
-            cluster = model.fit_predict(data_point.values.reshape(1, -1))
-            if cluster[0] != -1:  # Not an outlier
-                return model_name.replace('_dbscan', ''), cluster[0]
-        elif 'kmeans' in model_name.lower():
-            cluster = model.predict(data_point.values.reshape(1, -1))
-            return model_name.replace('_kmeans', ''), cluster[0]
-    return 'default', 0  # If no cluster is determined, use a default cluster
+def predict_cluster(data_point, cluster_models, clustering_methods):
+    clusters = {}
+    for column, method in clustering_methods.items():
+        if method == 'None':
+            clusters[column] = 'label_0'
+        elif column in cluster_models:
+            model = cluster_models[column]
+            if method == 'DBSCAN':
+                cluster = model.fit_predict(data_point[column].values.reshape(1, -1))
+                clusters[column] = f'label_{cluster[0]}'
+            elif method == 'KMeans':
+                cluster = model.predict(data_point[column].values.reshape(1, -1))
+                clusters[column] = f'label_{cluster[0]}'
+        else:
+            clusters[column] = 'unknown'
+    return clusters
 
 def evaluate_predictions(y_true, y_pred):
     metrics = calculate_metrics(y_true, y_pred)
