@@ -15,7 +15,7 @@ from _8prediction import PredictionProcessor, load_saved_models, predict_for_new
 
 def main():
     set_streamlit_theme()
-    st.title("ML Algo Trainer")
+    st.title(STREAMLIT_APP_NAME)
 
     # Mode selection
     mode = st.radio("Select Mode", ["Training", "Prediction"])
