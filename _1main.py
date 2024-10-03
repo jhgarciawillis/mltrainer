@@ -67,7 +67,7 @@ def run_training_mode(user_config):
                     
                     # Create clusters if clustering is enabled
                     if user_config.use_clustering:
-                        clustered_data = create_clusters(preprocessed_data, user_config.clustering_methods, user_config.clustering_parameters)
+                        clustered_data = create_clusters(preprocessed_data, user_config.clustering_config)
                     else:
                         clustered_data = {'no_cluster': {'label_0': preprocessed_data.index}}
                     
@@ -98,8 +98,7 @@ def run_training_mode(user_config):
                     save_unused_data(data_splits['unused_data'], os.path.join(MODELS_DIRECTORY, "unused_data.csv"))
                     
                     # Save clustering configuration
-                    joblib.dump(user_config.clustering_methods, os.path.join(MODELS_DIRECTORY, "clustering_methods.joblib"))
-                    joblib.dump(user_config.clustering_parameters, os.path.join(MODELS_DIRECTORY, "clustering_parameters.joblib"))
+                    joblib.dump(user_config.clustering_config, os.path.join(MODELS_DIRECTORY, "clustering_config.joblib"))
                     
                     st.success("Training completed successfully!")
                     
@@ -125,8 +124,7 @@ def run_prediction_mode(user_config):
         with st.spinner("Loading saved models and preprocessors..."):
             all_models = load_saved_models(MODELS_DIRECTORY)
             global_preprocessor = load_global_preprocessor(MODELS_DIRECTORY)
-            clustering_methods = joblib.load(os.path.join(MODELS_DIRECTORY, "clustering_methods.joblib"))
-            clustering_parameters = joblib.load(os.path.join(MODELS_DIRECTORY, "clustering_parameters.joblib"))
+            clustering_config = joblib.load(os.path.join(MODELS_DIRECTORY, "clustering_config.joblib"))
             cluster_models = load_clustering_models(MODELS_DIRECTORY)
             st.success("Models and preprocessors loaded successfully.")
     else:
@@ -134,8 +132,7 @@ def run_prediction_mode(user_config):
         if user_config.uploaded_models and user_config.uploaded_preprocessor:
             all_models = {model.name: joblib.load(model) for model in user_config.uploaded_models}
             global_preprocessor = joblib.load(user_config.uploaded_preprocessor)
-            clustering_methods = {}
-            clustering_parameters = {}
+            clustering_config = {}
             cluster_models = None
             st.success("Uploaded models and preprocessor loaded successfully.")
         else:
@@ -149,7 +146,7 @@ def run_prediction_mode(user_config):
 
         # Make predictions
         with st.spinner("Generating predictions..."):
-            predictions = predict_for_new_data(all_models, new_data, cluster_models, clustering_methods, clustering_parameters)
+            predictions = predict_for_new_data(all_models, new_data, cluster_models, clustering_config)
             st.write("Predictions:")
             st.dataframe(predictions)
 
