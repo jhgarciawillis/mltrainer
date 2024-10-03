@@ -73,11 +73,11 @@ def train_and_validate_models(data_splits, clustered_X_train_combined, clustered
     all_evaluation_metrics = {}
 
     progress_bar = st.progress(0)
-    for i, (cluster_name, split_data) in enumerate(data_splits.items()):
-        st.write(f"\nProcessing data for cluster: {cluster_name}")
+    for i, (cluster_key, split_data) in enumerate(data_splits.items()):
+        st.write(f"\nProcessing data for cluster: {cluster_key}")
 
-        X_train = clustered_X_train_combined[cluster_name]
-        X_test = clustered_X_test_combined[cluster_name]
+        X_train = clustered_X_train_combined[cluster_key]
+        X_test = clustered_X_test_combined[cluster_key]
         y_train = split_data['y_train']
         y_test = split_data['y_test']
         preprocessor = split_data['preprocessor']
@@ -86,12 +86,12 @@ def train_and_validate_models(data_splits, clustered_X_train_combined, clustered
         st.write(f"y_train shape: {y_train.shape}, y_test shape: {y_test.shape}")
 
         models, cv_results, evaluation_metrics = train_models(
-            X_train, y_train, cluster_name, models_to_use, MODELS_DIRECTORY, tuning_method, preprocessor
+            X_train, y_train, cluster_key, models_to_use, MODELS_DIRECTORY, tuning_method, preprocessor
         )
 
-        all_models[cluster_name] = models
-        ensemble_cv_results[cluster_name] = cv_results
-        all_evaluation_metrics[cluster_name] = evaluation_metrics
+        all_models[cluster_key] = models
+        ensemble_cv_results[cluster_key] = cv_results
+        all_evaluation_metrics[cluster_key] = evaluation_metrics
 
         progress_bar.progress((i + 1) / len(data_splits))
 
@@ -173,23 +173,23 @@ def create_ensemble_model(all_models, x_train, y_train, preprocessor, save_path=
 
     return ensemble_pipeline, cv_scores.tolist()
 
-def train_models(x_train, y_train, cluster_name, models_to_use, save_path, tuning_method, preprocessor):
+def train_models(x_train, y_train, cluster_key, models_to_use, save_path, tuning_method, preprocessor):
     """Train and evaluate multiple models for a specific cluster."""
-    st.write(f"Training models for cluster: {cluster_name}")
+    st.write(f"Training models for cluster: {cluster_key}")
 
     models = {}
     cv_results = {}
     evaluation_metrics = {}
 
     for model_name in models_to_use:
-        st.write(f"Training {model_name} for cluster {cluster_name}")
+        st.write(f"Training {model_name} for cluster {cluster_key}")
         model = get_model_instance(model_name)
 
         if tuning_method == 'GridSearchCV' or tuning_method == 'RandomizedSearchCV':
             best_model = tune_hyperparameters(model_name, model, x_train, y_train, preprocessor, tuning_method)
             cv_scores = cross_val_score(best_model, x_train, y_train, cv=MODEL_CV_SPLITS)
         else:
-            st.write(f"Training {model_name} without hyperparameter tuning on {cluster_name}...")
+            st.write(f"Training {model_name} without hyperparameter tuning on {cluster_key}...")
             if preprocessor is not None:
                 best_model = create_pipeline(model, preprocessor)
             else:
@@ -197,19 +197,19 @@ def train_models(x_train, y_train, cluster_name, models_to_use, save_path, tunin
             best_model.fit(x_train, y_train)
             cv_scores = cross_val_score(best_model, x_train, y_train, cv=MODEL_CV_SPLITS)
 
-        save_model(best_model, f"{cluster_name}_{model_name}")
+        save_model(best_model, f"{cluster_key}_{model_name}")
 
         models[model_name] = best_model
         cv_results[model_name] = cv_scores.tolist()
         y_pred = best_model.predict(x_train)
         evaluation_metrics[model_name] = calculate_metrics(y_train, y_pred)
 
-        st.write(f"Model {model_name} for cluster {cluster_name}:")
+        st.write(f"Model {model_name} for cluster {cluster_key}:")
         st.write(f"  CV scores: {cv_scores}")
         st.write(f"  Evaluation metrics: {evaluation_metrics[model_name]}")
 
         # Plot actual vs predicted values
-        plot_prediction_vs_actual(y_train, y_pred, title=f"{model_name} - Actual vs Predicted ({cluster_name})")
+        plot_prediction_vs_actual(y_train, y_pred, title=f"{model_name} - Actual vs Predicted ({cluster_key})")
 
     return models, cv_results, evaluation_metrics
 
@@ -232,8 +232,8 @@ def load_trained_models(models_directory):
 
 def display_model_performance(all_evaluation_metrics):
     st.subheader("Model Performance")
-    for cluster_name, cluster_metrics in all_evaluation_metrics.items():
-        st.write(f"Cluster: {cluster_name}")
+    for cluster_key, cluster_metrics in all_evaluation_metrics.items():
+        st.write(f"Cluster: {cluster_key}")
         for model_name, metrics in cluster_metrics.items():
             st.write(f"Model: {model_name}")
             for metric_name, metric_value in metrics.items():
@@ -242,8 +242,8 @@ def display_model_performance(all_evaluation_metrics):
 
 def save_trained_models(all_models, save_path):
     """Save all trained models to the specified directory."""
-    for cluster_name, models in all_models.items():
+    for cluster_key, models in all_models.items():
         for model_name, model in models.items():
-            filename = f"{cluster_name}_{model_name}"
+            filename = f"{cluster_key}_{model_name}"
             save_model(model, filename, save_path)
     st.success("All trained models saved successfully.")
