@@ -6,7 +6,7 @@ import joblib
 import os
 from sklearn.cluster import DBSCAN, KMeans
 from _0config import config, MODELS_DIRECTORY
-from _2utility import debug_print, plot_prediction_vs_actual
+from _2misc_utils import debug_print, plot_prediction_vs_actual, flatten_clustered_data
 from _7metrics import calculate_metrics, display_metrics, plot_residuals
 
 class PredictionProcessor:
@@ -32,10 +32,15 @@ class PredictionProcessor:
     def _process_clustered_models(self, writer, all_models, clustered_X_train_combined, 
                                   clustered_X_test_combined, ensemble_cv_results):
         st.write("Processing Clustered Models")
+        flattened_all_models = flatten_clustered_data(all_models)
+        flattened_clustered_X_train_combined = flatten_clustered_data(clustered_X_train_combined)
+        flattened_clustered_X_test_combined = flatten_clustered_data(clustered_X_test_combined)
+        flattened_ensemble_cv_results = flatten_clustered_data(ensemble_cv_results)
+
         progress_bar = st.progress(0)
-        for i, (cluster_key, models) in enumerate(all_models.items()):
-            X_train = clustered_X_train_combined[cluster_key]
-            X_test = clustered_X_test_combined[cluster_key]
+        for i, (cluster_key, models) in enumerate(flattened_all_models.items()):
+            X_train = flattened_clustered_X_train_combined[cluster_key]
+            X_test = flattened_clustered_X_test_combined[cluster_key]
             y_train = X_train[config.target_column]
             y_test = X_test[config.target_column]
             X_train = X_train.drop(columns=[config.target_column])
@@ -44,8 +49,8 @@ class PredictionProcessor:
             for model_name, model in models.items():
                 self._process_model(writer, model, X_train, X_test, y_train, y_test, 
                                     f"{cluster_key}_{model_name}", 
-                                    ensemble_cv_results.get(cluster_key, {}).get(model_name, []))
-            progress_bar.progress((i + 1) / len(all_models))
+                                    flattened_ensemble_cv_results.get(cluster_key, {}).get(model_name, []))
+            progress_bar.progress((i + 1) / len(flattened_all_models))
 
     def _process_flattened_models(self, writer, flattened_models, flattened_X_train, 
                                   flattened_X_test, ensemble_cv_results):
