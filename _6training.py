@@ -74,7 +74,7 @@ def train_and_validate_models(data_splits, clustered_X_train_combined, clustered
 
     progress_bar = st.progress(0)
     for i, (cluster_name, split_data) in enumerate(data_splits.items()):
-        st.write(f"\nProcessing data for cluster: {cluster_name}...")
+        st.write(f"\nProcessing data for cluster: {cluster_name}")
 
         X_train = clustered_X_train_combined[cluster_name]
         X_test = clustered_X_test_combined[cluster_name]
