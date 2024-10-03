@@ -15,7 +15,12 @@ from _8prediction import PredictionProcessor, load_saved_models, predict_for_new
 
 def main():
     set_streamlit_theme()
-    st.title(STREAMLIT_APP_NAME)
+    st.set_page_config(
+        page_title=config.STREAMLIT_APP_NAME,
+        page_icon=config.STREAMLIT_APP_ICON,
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
 
     # Mode selection
     mode = st.radio("Select Mode", ["Training", "Prediction"])
