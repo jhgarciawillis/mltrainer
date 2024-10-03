@@ -5,8 +5,7 @@ import pandas as pd
 import traceback
 
 from _0config import (config, MODELS_DIRECTORY, PREDICTIONS_PATH, AVAILABLE_CLUSTERING_METHODS,
-                      MODEL_CLASSES, LOG_FILE, GITHUB_USERNAME, GITHUB_REPOSITORY, STREAMLIT_APP_NAME,
-                      STREAMLIT_APP_URL, STREAMLIT_APP_ICON)
+                      MODEL_CLASSES, LOG_FILE, STREAMLIT_APP_NAME, STREAMLIT_APP_ICON)
 from _2utility import (setup_logging, setup_directory, truncate_sheet_name, 
                        check_and_remove_duplicate_columns, check_and_reset_indices, 
                        display_dataframe, get_user_inputs, validate_file_upload, 
@@ -31,26 +30,24 @@ def main():
     st.set_page_config(page_title=STREAMLIT_APP_NAME, page_icon=STREAMLIT_APP_ICON, layout="wide")
     st.title(STREAMLIT_APP_NAME)
 
-    st.sidebar.write(f"Application URL: [{STREAMLIT_APP_NAME}]({STREAMLIT_APP_URL})")
-    st.sidebar.write(f"GitHub Repository: [{ GITHUB_USERNAME }/{ GITHUB_REPOSITORY }](https://github.com/{ GITHUB_USERNAME }/{ GITHUB_REPOSITORY })")
-
     # Mode selection
-    mode = st.sidebar.radio("Select Mode", ["Training", "Prediction"])
+    mode = st.radio("Select Mode", ["Training", "Prediction"])
+
+    # Get user inputs based on the selected mode
+    user_config = get_user_inputs(mode)
 
     if mode == "Training":
-        run_training_mode()
+        run_training_mode(user_config)
     else:
-        run_prediction_mode()
+        run_prediction_mode(user_config)
 
-def run_training_mode():
+def run_training_mode(user_config):
     st.header("Training Mode")
 
-    # File upload
-    uploaded_file = st.file_uploader("Choose a CSV or Excel file", type=["csv", "xlsx"])
-    if uploaded_file is not None:
+    if user_config.file_path is not None:
         try:
             # Load data
-            data = load_data(uploaded_file)
+            data = load_data(user_config.file_path, user_config.sheet_name)
             st.write("Data loaded successfully.")
             display_data_info(data)
 
@@ -63,23 +60,6 @@ def run_training_mode():
                 unused_columns=selected_columns['unused']
             )
 
-            # Get user inputs for model configuration
-            models_to_use = st.multiselect("Select models to use", list(MODEL_CLASSES.keys()))
-            tuning_method = st.selectbox("Select tuning method", ["None", "GridSearchCV", "RandomizedSearchCV"])
-            
-            # Clustering configuration
-            clustering_method = st.selectbox("Select clustering method", AVAILABLE_CLUSTERING_METHODS)
-            if clustering_method == 'DBSCAN':
-                eps = st.slider("DBSCAN eps", 0.1, 1.0, 0.5)
-                min_samples = st.slider("DBSCAN min_samples", 2, 10, 5)
-                clustering_params = {'eps': eps, 'min_samples': min_samples}
-            elif clustering_method == 'KMeans':
-                n_clusters = st.slider("Number of clusters", 2, 10, 5)
-                clustering_params = {'n_clusters': n_clusters}
-            
-            # Train/test split
-            train_size = st.slider("Select percentage of data for training", 0.1, 0.9, 0.8)
-            
             if st.button("Start Training"):
                 with st.spinner("Training in progress..."):
                     # Preprocess data
@@ -87,21 +67,24 @@ def run_training_mode():
                     
                     # Create clusters
                     clustering_config = {
-                        'method': clustering_method,
-                        'params': clustering_params,
+                        'method': user_config.clustering_method,
+                        'params': user_config.clustering_parameters,
                         'columns': config.get('numerical_columns')
                     }
                     clustered_data = create_clusters(preprocessed_data, clustering_config)
                     
                     # Split and preprocess data
-                    data_splits = split_and_preprocess_data(preprocessed_data, clustered_data, config.get('target_column'), train_size)
+                    data_splits = split_and_preprocess_data(preprocessed_data, clustered_data, config.get('target_column'), user_config.train_size)
                     
                     # Generate features
-                    feature_generation_functions = [
-                        generate_polynomial_features,
-                        generate_interaction_terms,
-                        generate_statistical_features
-                    ]
+                    feature_generation_functions = []
+                    if user_config.use_polynomial_features:
+                        feature_generation_functions.append(generate_polynomial_features)
+                    if user_config.use_interaction_terms:
+                        feature_generation_functions.append(generate_interaction_terms)
+                    if user_config.use_statistical_features:
+                        feature_generation_functions.append(generate_statistical_features)
+                    
                     clustered_X_train_combined, clustered_X_test_combined = apply_feature_generation(
                         data_splits, feature_generation_functions
                     )
@@ -109,7 +92,7 @@ def run_training_mode():
                     # Train models
                     all_models, ensemble_cv_results, all_evaluation_metrics = train_and_validate_models(
                         data_splits, clustered_X_train_combined, clustered_X_test_combined, 
-                        models_to_use, tuning_method
+                        user_config.models_to_use, user_config.tuning_method
                     )
                     
                     # Save models and unused data
@@ -132,13 +115,10 @@ def run_training_mode():
             st.error(f"An error occurred: {str(e)}")
             st.error("Check the log file for more details.")
 
-def run_prediction_mode():
+def run_prediction_mode(user_config):
     st.header("Prediction Mode")
 
-    # Option to use saved models or upload new ones
-    use_saved_models = st.radio("Use saved models?", ["Yes", "No"])
-
-    if use_saved_models == "Yes":
+    if user_config.use_saved_models == "Yes":
         # Load saved models and preprocessors
         with st.spinner("Loading saved models and preprocessors..."):
             all_models = load_saved_models(MODELS_DIRECTORY)
@@ -146,22 +126,18 @@ def run_prediction_mode():
             cluster_models = load_clustering_models(MODELS_DIRECTORY)
             st.success("Models and preprocessors loaded successfully.")
     else:
-        # Allow user to upload models and preprocessors
-        st.write("Please upload your trained models and preprocessors.")
-        uploaded_models = st.file_uploader("Upload trained models", type="joblib", accept_multiple_files=True)
-        uploaded_preprocessor = st.file_uploader("Upload preprocessor", type="joblib")
-        if uploaded_models and uploaded_preprocessor:
-            all_models = {model.name: joblib.load(model) for model in uploaded_models}
-            global_preprocessor = joblib.load(uploaded_preprocessor)
+        # Use uploaded models and preprocessors
+        if user_config.uploaded_models and user_config.uploaded_preprocessor:
+            all_models = {model.name: joblib.load(model) for model in user_config.uploaded_models}
+            global_preprocessor = joblib.load(user_config.uploaded_preprocessor)
             st.success("Uploaded models and preprocessor loaded successfully.")
         else:
             st.warning("Please upload all required files.")
             return
 
-    # Upload new data for prediction
-    new_data_file = st.file_uploader("Choose a CSV file with new data for prediction", type="csv")
-    if new_data_file is not None:
-        new_data = pd.read_csv(new_data_file)
+    # Make predictions using the new data file
+    if user_config.new_data_file is not None:
+        new_data = pd.read_csv(user_config.new_data_file)
         st.write("New data shape:", new_data.shape)
 
         # Make predictions
