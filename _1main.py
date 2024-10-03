@@ -59,11 +59,11 @@ def run_training_mode(user_config):
             if selected_columns is None:
                 return
 
-            config.update(
-                numerical_columns=selected_columns['numerical'],
-                categorical_columns=selected_columns['categorical'],
-                target_column=selected_columns['target'],
-                unused_columns=selected_columns['unused']
+            config.set_column_types(
+                numerical=selected_columns['numerical'],
+                categorical=selected_columns['categorical'],
+                unused=selected_columns['unused'],
+                target=selected_columns['target']
             )
 
             if st.button("Start Training"):
@@ -78,7 +78,7 @@ def run_training_mode(user_config):
                         clustered_data = {'no_cluster': {'label_0': preprocessed_data.index}}
                     
                     # Split and preprocess data
-                    data_splits = split_and_preprocess_data(preprocessed_data, clustered_data, config.get('target_column'), user_config.train_size)
+                    data_splits = split_and_preprocess_data(preprocessed_data, clustered_data, config.target_column, user_config.train_size)
                     
                     # Generate features
                     feature_generation_functions = []
@@ -101,10 +101,11 @@ def run_training_mode(user_config):
                     
                     # Save models and unused data
                     save_trained_models(all_models, MODELS_DIRECTORY)
-                    save_unused_data(data_splits['unused_data'], os.path.join(MODELS_DIRECTORY, "unused_data.csv"))
+                    save_unused_data(data[config.unused_columns], os.path.join(MODELS_DIRECTORY, "unused_data.csv"))
                     
                     # Save clustering configuration
                     joblib.dump(user_config.clustering_config, os.path.join(MODELS_DIRECTORY, "clustering_config.joblib"))
+                    joblib.dump(config.clustering_2d_config, os.path.join(MODELS_DIRECTORY, "clustering_2d_config.joblib"))
                     
                     st.success("Training completed successfully!")
                     
@@ -131,6 +132,7 @@ def run_prediction_mode(user_config):
             all_models = load_saved_models(MODELS_DIRECTORY)
             global_preprocessor = load_global_preprocessor(MODELS_DIRECTORY)
             clustering_config = joblib.load(os.path.join(MODELS_DIRECTORY, "clustering_config.joblib"))
+            clustering_2d_config = joblib.load(os.path.join(MODELS_DIRECTORY, "clustering_2d_config.joblib"))
             cluster_models = load_clustering_models(MODELS_DIRECTORY)
             st.success("Models and preprocessors loaded successfully.")
     else:
@@ -139,6 +141,7 @@ def run_prediction_mode(user_config):
             all_models = {model.name: joblib.load(model) for model in user_config.uploaded_models}
             global_preprocessor = joblib.load(user_config.uploaded_preprocessor)
             clustering_config = {}
+            clustering_2d_config = {}
             cluster_models = None
             st.success("Uploaded models and preprocessor loaded successfully.")
         else:
@@ -152,13 +155,13 @@ def run_prediction_mode(user_config):
 
         # Make predictions
         with st.spinner("Generating predictions..."):
-            predictions = predict_for_new_data(all_models, new_data, cluster_models, clustering_config)
+            predictions = predict_for_new_data(all_models, new_data, cluster_models, clustering_config, clustering_2d_config)
             st.write("Predictions:")
             st.dataframe(predictions)
 
             # Calculate and display metrics if target column is available
-            if config.get('target_column') in new_data.columns:
-                metrics = calculate_metrics(new_data[config.get('target_column')], predictions['Prediction'])
+            if config.target_column in new_data.columns:
+                metrics = calculate_metrics(new_data[config.target_column], predictions['Prediction'])
                 st.subheader("Prediction Metrics")
                 st.table(pd.DataFrame(metrics, index=[0]))
 
