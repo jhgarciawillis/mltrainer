@@ -5,7 +5,7 @@ from logging.handlers import RotatingFileHandler
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-from _0config import STREAMLIT_THEME, MAX_ROWS_TO_DISPLAY, CHART_HEIGHT, CHART_WIDTH, config
+from _0config import STREAMLIT_THEME, MAX_ROWS_TO_DISPLAY, CHART_HEIGHT, CHART_WIDTH, config, AVAILABLE_CLUSTERING_METHODS, MODEL_CLASSES, DBSCAN_PARAMETERS, KMEANS_PARAMETERS
 
 def setup_directory(directory_path):
     """Ensures that the directory exists; if not, it creates it."""
@@ -139,35 +139,76 @@ def get_user_inputs(mode):
 
 def get_training_inputs():
     """Get user inputs for Training mode."""
-    st.sidebar.header("Training Configuration")
+    st.header("Training Configuration")
     
-    uploaded_file = st.sidebar.file_uploader("Choose a CSV or Excel file", type=["csv", "xlsx"])
-    if uploaded_file is not None:
-        config.update(file_path=uploaded_file)
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        uploaded_file = st.file_uploader("Choose a CSV or Excel file", type=["csv", "xlsx"])
+        if uploaded_file is not None:
+            config.update(file_path=uploaded_file)
+            
+            if uploaded_file.name.endswith('.xlsx'):
+                xls = pd.ExcelFile(uploaded_file)
+                sheet_name = st.selectbox("Select sheet", xls.sheet_names)
+                config.update(sheet_name=sheet_name)
         
-        if uploaded_file.name.endswith('.xlsx'):
-            xls = pd.ExcelFile(uploaded_file)
-            sheet_name = st.sidebar.selectbox("Select sheet", xls.sheet_names)
-            config.update(sheet_name=sheet_name)
-        
-        train_size = st.sidebar.slider("Select percentage of data for training", 0.1, 0.9, 0.8)
+        train_size = st.slider("Select percentage of data for training", 0.1, 0.9, 0.8)
         config.update(train_size=train_size)
+    
+    with col2:
+        clustering_method = st.selectbox("Select clustering method", AVAILABLE_CLUSTERING_METHODS)
+        if clustering_method == 'DBSCAN':
+            eps = st.slider("DBSCAN eps", 0.1, 1.0, DBSCAN_PARAMETERS['eps'])
+            min_samples = st.slider("DBSCAN min_samples", 2, 10, DBSCAN_PARAMETERS['min_samples'])
+            clustering_params = {'eps': eps, 'min_samples': min_samples}
+        elif clustering_method == 'KMeans':
+            n_clusters = st.slider("Number of clusters", 2, 10, KMEANS_PARAMETERS['n_clusters'])
+            clustering_params = {'n_clusters': n_clusters}
+        
+        config.update(clustering_method=clustering_method, clustering_parameters=clustering_params)
+        
+        models_to_use = st.multiselect("Select models to use", list(MODEL_CLASSES.keys()))
+        config.update(models_to_use=models_to_use)
+        
+        tuning_method = st.selectbox("Select tuning method", ["None", "GridSearchCV", "RandomizedSearchCV"])
+        config.update(tuning_method=tuning_method)
+    
+    st.header("Feature Engineering Options")
+    col3, col4, col5 = st.columns(3)
+    with col3:
+        use_polynomial_features = st.checkbox("Use polynomial features", value=True)
+    with col4:
+        use_interaction_terms = st.checkbox("Use interaction terms", value=True)
+    with col5:
+        use_statistical_features = st.checkbox("Use statistical features", value=True)
+    
+    config.update(
+        use_polynomial_features=use_polynomial_features,
+        use_interaction_terms=use_interaction_terms,
+        use_statistical_features=use_statistical_features
+    )
     
     return config
 
 def get_prediction_inputs():
     """Get user inputs for Prediction mode."""
-    st.sidebar.header("Prediction Configuration")
+    st.header("Prediction Configuration")
     
-    use_saved_models = st.sidebar.radio("Use saved models?", ["Yes", "No"])
-    if use_saved_models == "No":
-        uploaded_models = st.sidebar.file_uploader("Upload trained models", type="joblib", accept_multiple_files=True)
-        uploaded_preprocessor = st.sidebar.file_uploader("Upload preprocessor", type="joblib")
-        config.update(uploaded_models=uploaded_models, uploaded_preprocessor=uploaded_preprocessor)
+    col1, col2 = st.columns(2)
     
-    new_data_file = st.sidebar.file_uploader("Choose a CSV file with new data for prediction", type="csv")
-    if new_data_file is not None:
-        config.update(new_data_file=new_data_file)
+    with col1:
+        use_saved_models = st.radio("Use saved models?", ["Yes", "No"])
+        
+        if use_saved_models == "No":
+            uploaded_models = st.file_uploader("Upload trained models", type="joblib", accept_multiple_files=True)
+            uploaded_preprocessor = st.file_uploader("Upload preprocessor", type="joblib")
+            config.update(uploaded_models=uploaded_models, uploaded_preprocessor=uploaded_preprocessor)
+    
+    with col2:
+        new_data_file = st.file_uploader("Choose a CSV file with new data for prediction", type="csv")
+        if new_data_file is not None:
+            config.update(new_data_file=new_data_file)
     
     return config
 
