@@ -5,7 +5,7 @@ from itertools import combinations
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.feature_selection import SelectKBest, f_regression
 from _0config import config, MAX_INTERACTION_DEGREE, STATISTICAL_AGG_FUNCTIONS, TOP_K_FEATURES, POLYNOMIAL_DEGREE
-from _2utility import debug_print, plot_feature_importance
+from _2misc_utils import debug_print, plot_feature_importance, flatten_clustered_data
 
 def generate_polynomial_features(X, degree=POLYNOMIAL_DEGREE):
     numerical_cols = config.numerical_columns
@@ -77,12 +77,14 @@ def apply_feature_generation(data_splits, feature_generation_functions):
     clustered_X_train_combined = {}
     clustered_X_test_combined = {}
 
+    flattened_data_splits = flatten_clustered_data(data_splits)
+
     progress_bar = st.progress(0)
-    for i, (cluster_name, split_data) in enumerate(data_splits.items()):
+    for i, (cluster_key, split_data) in enumerate(flattened_data_splits.items()):
         X_train, y_train = split_data['X_train'], split_data['y_train']
         X_test = split_data['X_test']
 
-        st.write(f"Applying feature generation for cluster: {cluster_name}")
+        st.write(f"Applying feature generation for cluster: {cluster_key}")
         st.write(f"Initial X_train shape: {X_train.shape}, X_test shape: {X_test.shape}")
 
         new_features_train = pd.DataFrame(index=X_train.index)
@@ -100,7 +102,7 @@ def apply_feature_generation(data_splits, feature_generation_functions):
                 new_features_train = pd.concat([new_features_train, new_features_train_func], axis=1)
                 new_features_test = pd.concat([new_features_test, new_features_test_func], axis=1)
             except Exception as e:
-                st.error(f"Error in {feature_gen_func.__name__} for cluster {cluster_name}: {str(e)}")
+                st.error(f"Error in {feature_gen_func.__name__} for cluster {cluster_key}: {str(e)}")
                 continue
 
         X_train_combined = pd.concat([X_train, new_features_train], axis=1)
@@ -114,13 +116,13 @@ def apply_feature_generation(data_splits, feature_generation_functions):
         X_train_selected = select_top_features(X_train_combined, y_train)
         X_test_selected = X_test_combined[X_train_selected.columns]
 
-        clustered_X_train_combined[cluster_name] = X_train_selected
-        clustered_X_test_combined[cluster_name] = X_test_selected
+        clustered_X_train_combined[cluster_key] = X_train_selected
+        clustered_X_test_combined[cluster_key] = X_test_selected
 
-        st.write(f"Final X_train shape for cluster {cluster_name}: {X_train_selected.shape}")
-        st.write(f"Final X_test shape for cluster {cluster_name}: {X_test_selected.shape}")
+        st.write(f"Final X_train shape for cluster {cluster_key}: {X_train_selected.shape}")
+        st.write(f"Final X_test shape for cluster {cluster_key}: {X_test_selected.shape}")
         
-        progress_bar.progress((i + 1) / len(data_splits))
+        progress_bar.progress((i + 1) / len(flattened_data_splits))
 
     st.success("Feature generation completed for all clusters.")
     return clustered_X_train_combined, clustered_X_test_combined
@@ -155,9 +157,10 @@ def select_top_features(X, y, k=TOP_K_FEATURES):
 
 def combine_feature_engineered_data(data_splits, clustered_X_train_combined, clustered_X_test_combined):
     st.subheader("Combining Feature Engineered Data")
-    for cluster_name in data_splits.keys():
-        X_train = clustered_X_train_combined[cluster_name]
-        X_test = clustered_X_test_combined[cluster_name]
+    flattened_data_splits = flatten_clustered_data(data_splits)
+    for cluster_key in flattened_data_splits.keys():
+        X_train = clustered_X_train_combined[cluster_key]
+        X_test = clustered_X_test_combined[cluster_key]
 
         # Remove duplicate columns
         X_train = X_train.loc[:, ~X_train.columns.duplicated()]
@@ -174,10 +177,10 @@ def combine_feature_engineered_data(data_splits, clustered_X_train_combined, clu
         X_train = X_train.reindex(sorted(X_train.columns), axis=1)
         X_test = X_test.reindex(sorted(X_test.columns), axis=1)
 
-        clustered_X_train_combined[cluster_name] = X_train
-        clustered_X_test_combined[cluster_name] = X_test
+        clustered_X_train_combined[cluster_key] = X_train
+        clustered_X_test_combined[cluster_key] = X_test
 
-        st.write(f"Combined data for cluster {cluster_name}:")
+        st.write(f"Combined data for cluster {cluster_key}:")
         st.write(f"X_train shape: {X_train.shape}, X_test shape: {X_test.shape}")
 
     st.success("Feature engineered data combined for all clusters.")
@@ -204,11 +207,12 @@ def generate_features_for_prediction(X, feature_generation_functions):
 
 def display_feature_info(clustered_X_train_combined, clustered_X_test_combined):
     st.subheader("Feature Information")
-    for cluster_name in clustered_X_train_combined.keys():
-        st.write(f"Cluster: {cluster_name}")
-        st.write(f"Number of features: {clustered_X_train_combined[cluster_name].shape[1]}")
+    flattened_data_splits = flatten_clustered_data(clustered_X_train_combined)
+    for cluster_key in flattened_data_splits.keys():
+        st.write(f"Cluster: {cluster_key}")
+        st.write(f"Number of features: {clustered_X_train_combined[cluster_key].shape[1]}")
         st.write("Top 10 features:")
-        st.write(clustered_X_train_combined[cluster_name].columns[:10].tolist())
+        st.write(clustered_X_train_combined[cluster_key].columns[:10].tolist())
         st.write("---")
 
 def plot_feature_correlations(X, y):
