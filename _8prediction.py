@@ -4,6 +4,7 @@ import streamlit as st
 import plotly.graph_objects as go
 import joblib
 import os
+from sklearn.cluster import DBSCAN, KMeans
 from _0config import config, MODELS_DIRECTORY
 from _2utility import debug_print, plot_prediction_vs_actual
 from _7metrics import calculate_metrics, display_metrics, plot_residuals
@@ -163,12 +164,12 @@ def display_predictions(predictions, actual_values=None):
         plot_prediction_vs_actual(actual_values, predictions)
         plot_residuals(actual_values, predictions)
 
-def predict_for_new_data(models, new_data, cluster_models, clustering_config):
+def predict_for_new_data(models, new_data, cluster_models, clustering_config, clustering_2d_config):
     st.subheader("Predictions for New Data")
     
     predictions = []
     for index, row in new_data.iterrows():
-        clusters = predict_cluster(row, cluster_models, clustering_config)
+        clusters = predict_cluster(row, cluster_models, clustering_config, clustering_2d_config)
         
         # Combine all cluster labels to form a unique identifier
         cluster_key = "_".join([f"{col}_{label}" for col, label in clusters.items()])
@@ -194,8 +195,10 @@ def predict_for_new_data(models, new_data, cluster_models, clustering_config):
     
     return predictions_df
 
-def predict_cluster(data_point, cluster_models, clustering_config):
+def predict_cluster(data_point, cluster_models, clustering_config, clustering_2d_config):
     clusters = {}
+    
+    # 1D Clustering prediction
     for column, config in clustering_config.items():
         method = config['method']
         if method == 'None':
@@ -210,6 +213,24 @@ def predict_cluster(data_point, cluster_models, clustering_config):
                 clusters[column] = f'label_{cluster[0]}'
         else:
             clusters[column] = 'unknown'
+    
+    # 2D Clustering prediction
+    for column_pair, config in clustering_2d_config.items():
+        method = config['method']
+        if method == 'None':
+            clusters[column_pair] = 'label_0'
+        elif column_pair in cluster_models:
+            model = cluster_models[column_pair]
+            data = data_point[list(column_pair)].values.reshape(1, -1)
+            if isinstance(model, DBSCAN):
+                cluster = model.fit_predict(data)
+                clusters[column_pair] = f'label_{cluster[0]}'
+            elif isinstance(model, KMeans):
+                cluster = model.predict(data)
+                clusters[column_pair] = f'label_{cluster[0]}'
+        else:
+            clusters[column_pair] = 'unknown'
+    
     return clusters
 
 def evaluate_predictions(y_true, y_pred):
