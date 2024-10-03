@@ -122,8 +122,7 @@ class Config:
         self.categorical_columns = []
         self.unused_columns = []
         self.use_clustering = False
-        self.clustering_methods = {}
-        self.clustering_parameters = {}
+        self.clustering_config = {}  # Will store {column: {'method': method, 'params': params}}
         self.train_size = 0.8
         self.models_to_use = []
         self.tuning_method = 'None'
