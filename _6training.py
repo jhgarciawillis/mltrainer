@@ -126,7 +126,7 @@ def train_models_on_flattened_data(flattened_x_train, flattened_y_train, models_
         st.warning("No data available for training models on flattened data.")
 
     return flattened_models, flattened_cv_results
-  
+
 def create_ensemble_model(all_models, x_train, y_train, preprocessor, save_path=MODELS_DIRECTORY):
     st.subheader("Creating Ensemble Model")
 
