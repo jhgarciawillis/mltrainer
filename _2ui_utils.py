@@ -1,12 +1,12 @@
 import streamlit as st
 from _0config import (STREAMLIT_THEME, AVAILABLE_CLUSTERING_METHODS, DBSCAN_PARAMETERS, KMEANS_PARAMETERS, 
-                      MODEL_CLASSES, config)
+                      MODEL_CLASSES, config, STREAMLIT_APP_NAME, CHART_WIDTH)
 from _2misc_utils import truncate_sheet_name, validate_file_upload
 
 def set_streamlit_theme():
     """Set the Streamlit theme based on the configuration."""
     st.set_page_config(
-        page_title=config.get('STREAMLIT_APP_NAME', "ML Algo Trainer"),
+        page_title=STREAMLIT_APP_NAME,
         page_icon="🧠",
         layout="wide",
         initial_sidebar_state="expanded",
