@@ -2,7 +2,7 @@ import streamlit as st
 
 from _2data_utils import load_data, display_data_info, handle_missing_values, auto_detect_column_types, display_column_selection, save_unused_data
 from _2ui_utils import set_streamlit_theme, display_metrics, get_user_inputs, get_training_inputs, display_clustering_options, select_2d_clustering_columns, get_prediction_inputs
-from _2misc_utils import debug_print, validate_file_upload
+from _2misc_utils import debug_print, validate_file_upload, setup_logging
 
 from _3preprocessing import load_and_preprocess_data, split_and_preprocess_data, create_global_preprocessor, save_global_preprocessor, load_global_preprocessor
 from _4cluster import create_clusters, load_clustering_models, predict_cluster
