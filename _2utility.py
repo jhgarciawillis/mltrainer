@@ -191,28 +191,19 @@ def display_clustering_options():
     """Display options for clustering configuration."""
     st.subheader("Clustering Configuration")
     
-    apply_to_all = st.checkbox("Apply same clustering method to all numerical columns")
-    
-    if apply_to_all:
-        clustering_method = st.selectbox("Select clustering method for all columns", AVAILABLE_CLUSTERING_METHODS)
-        for col in config.numerical_columns:
-            config.clustering_methods[col] = clustering_method
-    else:
-        for col in config.numerical_columns:
-            method = st.selectbox(f"Select clustering method for {col}", AVAILABLE_CLUSTERING_METHODS)
-            config.clustering_methods[col] = method
-    
-    # Set clustering parameters
-    for method in set(config.clustering_methods.values()):
-        if method == 'DBSCAN':
-            st.subheader("DBSCAN Parameters")
-            eps = st.slider("eps", 0.1, 1.0, DBSCAN_PARAMETERS['eps'])
-            min_samples = st.slider("min_samples", 2, 10, DBSCAN_PARAMETERS['min_samples'])
-            config.clustering_parameters['DBSCAN'] = {'eps': eps, 'min_samples': min_samples}
-        elif method == 'KMeans':
-            st.subheader("KMeans Parameters")
-            n_clusters = st.slider("n_clusters", 2, 10, KMEANS_PARAMETERS['n_clusters'])
-            config.clustering_parameters['KMeans'] = {'n_clusters': n_clusters}
+    for col in config.numerical_columns:
+        method = st.selectbox(f"Select clustering method for {col}", AVAILABLE_CLUSTERING_METHODS, key=f"cluster_method_{col}")
+        if method != 'None':
+            if method == 'DBSCAN':
+                eps = st.slider(f"DBSCAN eps for {col}", 0.1, 1.0, DBSCAN_PARAMETERS['eps'], key=f"dbscan_eps_{col}")
+                min_samples = st.slider(f"DBSCAN min_samples for {col}", 2, 10, DBSCAN_PARAMETERS['min_samples'], key=f"dbscan_min_samples_{col}")
+                params = {'eps': eps, 'min_samples': min_samples}
+            elif method == 'KMeans':
+                n_clusters = st.slider(f"KMeans n_clusters for {col}", 2, 10, KMEANS_PARAMETERS['n_clusters'], key=f"kmeans_n_clusters_{col}")
+                params = {'n_clusters': n_clusters}
+            config.clustering_config[col] = {'method': method, 'params': params}
+        else:
+            config.clustering_config[col] = {'method': 'None', 'params': {}}
 
 def get_prediction_inputs():
     """Get user inputs for Prediction mode."""
