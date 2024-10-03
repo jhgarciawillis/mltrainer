@@ -32,9 +32,9 @@ class PredictionProcessor:
                                   clustered_X_test_combined, ensemble_cv_results):
         st.write("Processing Clustered Models")
         progress_bar = st.progress(0)
-        for i, (cluster_name, models) in enumerate(all_models.items()):
-            X_train = clustered_X_train_combined[cluster_name]
-            X_test = clustered_X_test_combined[cluster_name]
+        for i, (cluster_key, models) in enumerate(all_models.items()):
+            X_train = clustered_X_train_combined[cluster_key]
+            X_test = clustered_X_test_combined[cluster_key]
             y_train = X_train[config.target_column]
             y_test = X_test[config.target_column]
             X_train = X_train.drop(columns=[config.target_column])
@@ -42,8 +42,8 @@ class PredictionProcessor:
 
             for model_name, model in models.items():
                 self._process_model(writer, model, X_train, X_test, y_train, y_test, 
-                                    f"{cluster_name}_{model_name}", 
-                                    ensemble_cv_results.get(cluster_name, {}).get(model_name, []))
+                                    f"{cluster_key}_{model_name}", 
+                                    ensemble_cv_results.get(cluster_key, {}).get(model_name, []))
             progress_bar.progress((i + 1) / len(all_models))
 
     def _process_flattened_models(self, writer, flattened_models, flattened_X_train, 
@@ -163,12 +163,12 @@ def display_predictions(predictions, actual_values=None):
         plot_prediction_vs_actual(actual_values, predictions)
         plot_residuals(actual_values, predictions)
 
-def predict_for_new_data(models, new_data, cluster_models, clustering_methods, clustering_parameters):
+def predict_for_new_data(models, new_data, cluster_models, clustering_config):
     st.subheader("Predictions for New Data")
     
     predictions = []
     for index, row in new_data.iterrows():
-        clusters = predict_cluster(row, cluster_models, clustering_methods)
+        clusters = predict_cluster(row, cluster_models, clustering_config)
         
         # Combine all cluster labels to form a unique identifier
         cluster_key = "_".join([f"{col}_{label}" for col, label in clusters.items()])
@@ -194,17 +194,18 @@ def predict_for_new_data(models, new_data, cluster_models, clustering_methods, c
     
     return predictions_df
 
-def predict_cluster(data_point, cluster_models, clustering_methods):
+def predict_cluster(data_point, cluster_models, clustering_config):
     clusters = {}
-    for column, method in clustering_methods.items():
+    for column, config in clustering_config.items():
+        method = config['method']
         if method == 'None':
             clusters[column] = 'label_0'
         elif column in cluster_models:
             model = cluster_models[column]
-            if method == 'DBSCAN':
+            if isinstance(model, DBSCAN):
                 cluster = model.fit_predict(data_point[column].values.reshape(1, -1))
                 clusters[column] = f'label_{cluster[0]}'
-            elif method == 'KMeans':
+            elif isinstance(model, KMeans):
                 cluster = model.predict(data_point[column].values.reshape(1, -1))
                 clusters[column] = f'label_{cluster[0]}'
         else:
