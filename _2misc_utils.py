@@ -97,3 +97,11 @@ def validate_file_upload(uploaded_file):
         return False
     
     return True
+
+def flatten_clustered_data(clustered_data):
+    """Flatten the clustered data dictionary into a list of tuples."""
+    flattened_data = []
+    for cluster_name, cluster_dict in clustered_data.items():
+        for label, indices in cluster_dict.items():
+            flattened_data.append((cluster_name, label, indices))
+    return flattened_data
