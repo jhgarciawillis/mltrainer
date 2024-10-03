@@ -175,5 +175,3 @@ def display_cluster_metrics(cluster_metrics):
         st.write(f"Cluster: {cluster}")
         display_metrics(metrics)
         st.write("---")
-
-# Add any additional metric functions as needed
