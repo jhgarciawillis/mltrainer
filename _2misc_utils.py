@@ -56,17 +56,6 @@ def check_and_reset_indices(df):
         df = df.reset_index(drop=True)
     return df
 
-def display_dataframe(df, title="DataFrame"):
-    """Display a DataFrame in Streamlit with pagination."""
-    st.subheader(title)
-    page_size = 10
-    total_pages = (len(df) - 1) // page_size + 1
-    page_number = st.number_input(f"Page (1-{total_pages})", min_value=1, max_value=total_pages, value=1)
-    start_idx = (page_number - 1) * page_size
-    end_idx = min(start_idx + page_size, len(df))
-    st.dataframe(df.iloc[start_idx:end_idx])
-    st.write(f"Showing rows {start_idx+1} to {end_idx} of {len(df)}")
-
 def plot_feature_importance(feature_importance, title="Feature Importance"):
     """Plot feature importance using Plotly."""
     fig = px.bar(feature_importance, x='importance', y='feature', orientation='h',
@@ -82,6 +71,18 @@ def plot_prediction_vs_actual(y_true, y_pred, title="Prediction vs Actual"):
     fig.add_shape(type="line", line=dict(dash='dash'),
                   x0=df['Actual'].min(), y0=df['Actual'].min(),
                   x1=df['Actual'].max(), y1=df['Actual'].max())
+    st.plotly_chart(fig)
+
+def plot_residuals(y_true, y_pred):
+    """Plot regression residuals."""
+    residuals = y_true - y_pred
+    
+    fig = px.scatter(x=y_pred, y=residuals)
+    fig.update_layout(
+        title='Residual Plot',
+        xaxis_title='Predicted Values',
+        yaxis_title='Residuals'
+    )
     st.plotly_chart(fig)
 
 def validate_file_upload(uploaded_file):
