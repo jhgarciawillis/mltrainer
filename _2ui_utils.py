@@ -1,7 +1,7 @@
 import streamlit as st
 from _0config import (STREAMLIT_THEME, AVAILABLE_CLUSTERING_METHODS, DBSCAN_PARAMETERS, KMEANS_PARAMETERS, 
                       MODEL_CLASSES, config)
-from _2misc_utils import truncate_sheet_name
+from _2misc_utils import truncate_sheet_name, validate_file_upload
 
 def set_streamlit_theme():
     """Set the Streamlit theme based on the configuration."""
