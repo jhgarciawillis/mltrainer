@@ -293,23 +293,54 @@ def handle_missing_values(df):
     
     return df
 
-def display_column_selection(columns):
+def auto_detect_column_types(data):
+    """Automatically detect column types."""
+    numeric_columns = data.select_dtypes(include=['int64', 'float64']).columns.tolist()
+    categorical_columns = data.select_dtypes(exclude=['int64', 'float64']).columns.tolist()
+    target_column = data.columns[-1]
+    
+    # Remove target column from numeric or categorical lists
+    if target_column in numeric_columns:
+        numeric_columns.remove(target_column)
+    elif target_column in categorical_columns:
+        categorical_columns.remove(target_column)
+    
+    return {
+        'numerical': numeric_columns,
+        'categorical': categorical_columns,
+        'target': target_column,
+        'unused': []
+    }
+
+def display_column_selection(columns, initial_types):
     """Display interface for manual column selection."""
     st.subheader("Column Selection")
     
-    numerical_columns = st.multiselect("Select numerical columns", columns)
-    categorical_columns = st.multiselect("Select categorical columns", columns)
-    target_column = st.selectbox("Select target column (y value)", columns)
+    column_types = {}
+    for col in columns:
+        if col == initial_types['target']:
+            column_types[col] = st.selectbox(f"Select type for {col}", 
+                                             ['target', 'numerical', 'categorical', 'unused'],
+                                             index=0)
+        else:
+            column_types[col] = st.selectbox(f"Select type for {col}", 
+                                             ['numerical', 'categorical', 'unused', 'target'],
+                                             index=['numerical', 'categorical', 'unused', 'target'].index(
+                                                 'numerical' if col in initial_types['numerical'] 
+                                                 else 'categorical' if col in initial_types['categorical']
+                                                 else 'unused'
+                                             ))
     
-    unused_columns = list(set(columns) - set(numerical_columns) - set(categorical_columns) - {target_column})
-    
-    st.write("Unused columns:", ", ".join(unused_columns))
+    # Ensure we have a target column
+    if 'target' not in column_types.values():
+        st.error("Please select a target column")
+        return None
     
     return {
-        'numerical': numerical_columns,
-        'categorical': categorical_columns,
-        'target': target_column,
-        'unused': unused_columns
+        'numerical': [col for col, type in column_types.items() if type == 'numerical'],
+        'categorical': [col for col, type in column_types.items() if type == 'categorical'],
+        'target': next(col for col, type in column_types.items() if type == 'target'),
+        'unused': [col for col, type in column_types.items() if type == 'unused']
     }
 
 def save_unused_data(unused_data, file_path):
