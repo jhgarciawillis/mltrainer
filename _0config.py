@@ -124,6 +124,7 @@ class Config:
         self.all_columns = []
         self.use_clustering = False
         self.clustering_config = {}  # Will store {column: {'method': method, 'params': params}}
+        self.clustering_2d_config = {}  # Will store {(col1, col2): {'method': method, 'params': params}}
         self.train_size = 0.8
         self.models_to_use = []
         self.tuning_method = 'None'
@@ -149,6 +150,10 @@ class Config:
         self.unused_columns = unused
         self.target_column = target
         self.all_columns = list(set(numerical + categorical + unused + [target]))
+
+    def set_2d_clustering(self, column_pairs, method, params):
+        for pair in column_pairs:
+            self.clustering_2d_config[pair] = {'method': method, 'params': params}
 
 # Initialize global configuration
 config = Config()
