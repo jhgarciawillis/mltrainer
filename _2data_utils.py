@@ -111,3 +111,14 @@ def save_unused_data(unused_data, file_path):
     """Save unused data as CSV."""
     unused_data.to_csv(file_path, index=False)
     debug_print(f"Unused data saved to {file_path}")
+
+def display_dataframe(df, title="DataFrame"):
+    """Display a DataFrame in Streamlit with pagination."""
+    st.subheader(title)
+    page_size = 10
+    total_pages = (len(df) - 1) // page_size + 1
+    page_number = st.number_input(f"Page (1-{total_pages})", min_value=1, max_value=total_pages, value=1)
+    start_idx = (page_number - 1) * page_size
+    end_idx = min(start_idx + page_size, len(df))
+    st.dataframe(df.iloc[start_idx:end_idx])
+    st.write(f"Showing rows {start_idx+1} to {end_idx} of {len(df)}")
