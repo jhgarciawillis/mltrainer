@@ -11,7 +11,6 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # File paths and names
 DATA_PATH = os.path.join(BASE_DIR, "Data.xlsx")
 PREDICTIONS_PATH = os.path.join(BASE_DIR, "Predictions.xlsx")
-LOG_FILE = os.path.join(BASE_DIR, "app.log")
 MODELS_DIRECTORY = os.path.join(BASE_DIR, "Trained")
 CLUSTERS_PATH = os.path.join(BASE_DIR, "Clusters.joblib")
 GLOBAL_STATS_PATH = os.path.join(BASE_DIR, "global_stats.joblib")
