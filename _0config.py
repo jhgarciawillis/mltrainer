@@ -121,6 +121,7 @@ class Config:
         self.numerical_columns = []
         self.categorical_columns = []
         self.unused_columns = []
+        self.all_columns = []
         self.use_clustering = False
         self.clustering_config = {}  # Will store {column: {'method': method, 'params': params}}
         self.train_size = 0.8
@@ -138,12 +139,16 @@ class Config:
         for key, value in kwargs.items():
             if hasattr(self, key):
                 setattr(self, key, value)
+        
+        # Update all_columns to include all columns
+        self.all_columns = list(set(self.numerical_columns + self.categorical_columns + [self.target_column] + self.unused_columns))
 
     def set_column_types(self, numerical, categorical, unused, target):
         self.numerical_columns = numerical
         self.categorical_columns = categorical
         self.unused_columns = unused
         self.target_column = target
+        self.all_columns = list(set(numerical + categorical + unused + [target]))
 
 # Initialize global configuration
 config = Config()
