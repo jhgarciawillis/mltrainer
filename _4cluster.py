@@ -15,6 +15,7 @@ def create_clusters(preprocessed_data, clustering_config):
     clustered_data = {}
     cluster_models = {}
     
+    # 1D Clustering
     for column, config in clustering_config.items():
         method = config['method']
         params = config['params']
@@ -25,6 +26,18 @@ def create_clusters(preprocessed_data, clustering_config):
             clustered_data[column], cluster_models[column] = perform_dbscan_clustering(preprocessed_data[column], params)
         elif method == 'KMeans':
             clustered_data[column], cluster_models[column] = perform_kmeans_clustering(preprocessed_data[column], params)
+    
+    # 2D Clustering
+    for column_pair, config in config.clustering_2d_config.items():
+        method = config['method']
+        params = config['params']
+        
+        if method == 'None':
+            clustered_data[column_pair] = {'label_0': preprocessed_data.index}
+        elif method == 'DBSCAN':
+            clustered_data[column_pair], cluster_models[column_pair] = perform_2d_clustering(preprocessed_data[list(column_pair)], method, params)
+        elif method == 'KMeans':
+            clustered_data[column_pair], cluster_models[column_pair] = perform_2d_clustering(preprocessed_data[list(column_pair)], method, params)
     
     # Save cluster models
     save_clustering_models(cluster_models, MODELS_DIRECTORY)
@@ -69,6 +82,28 @@ def perform_kmeans_clustering(data, parameters):
     clusters = {f'label_{label}': data.index[cluster_labels == label].tolist() for label in unique_labels}
     return clusters, kmeans
 
+def perform_2d_clustering(data, method, parameters):
+    st.write(f"Performing 2D {method} clustering")
+    
+    # Standardize the features
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(data)
+    
+    if method == 'DBSCAN':
+        model = DBSCAN(**parameters)
+    elif method == 'KMeans':
+        model = KMeans(**parameters)
+    else:
+        raise ValueError(f"Unsupported clustering method: {method}")
+    
+    cluster_labels = model.fit_predict(X_scaled)
+    
+    unique_labels = np.unique(cluster_labels)
+    st.write(f"2D {method} clustering done. Number of clusters: {len(unique_labels)}")
+    
+    clusters = {f'label_{label}': data.index[cluster_labels == label].tolist() for label in unique_labels}
+    return clusters, model
+
 def save_clustering_models(cluster_models, save_path):
     """Save clustering models to the specified directory."""
     for column, model in cluster_models.items():
@@ -87,6 +122,8 @@ def load_clustering_models(models_directory):
 
 def predict_cluster(data_point, cluster_models, clustering_config):
     clusters = {}
+    
+    # 1D Clustering prediction
     for column, config in clustering_config.items():
         method = config['method']
         if method == 'None':
@@ -101,6 +138,24 @@ def predict_cluster(data_point, cluster_models, clustering_config):
                 clusters[column] = f'label_{cluster[0]}'
         else:
             clusters[column] = 'unknown'
+    
+    # 2D Clustering prediction
+    for column_pair, config in config.clustering_2d_config.items():
+        method = config['method']
+        if method == 'None':
+            clusters[column_pair] = 'label_0'
+        elif column_pair in cluster_models:
+            model = cluster_models[column_pair]
+            data = data_point[list(column_pair)].values.reshape(1, -1)
+            if isinstance(model, DBSCAN):
+                cluster = model.fit_predict(data)
+                clusters[column_pair] = f'label_{cluster[0]}'
+            elif isinstance(model, KMeans):
+                cluster = model.predict(data)
+                clusters[column_pair] = f'label_{cluster[0]}'
+        else:
+            clusters[column_pair] = 'unknown'
+    
     return clusters
 
 def display_cluster_info(clustered_data):
