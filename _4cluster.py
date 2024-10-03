@@ -6,9 +6,9 @@ from sklearn.preprocessing import StandardScaler
 import joblib
 import os
 from _0config import config, CLUSTERS_PATH, MODELS_DIRECTORY
-from _2utility import debug_print
+from _2misc_utils import debug_print
 
-def create_clusters(preprocessed_data, clustering_config):
+def create_clusters(preprocessed_data, clustering_config, clustering_2d_config):
     st.write("Creating clusters...")
     debug_print("Entering create_clusters function.")
     
@@ -28,7 +28,7 @@ def create_clusters(preprocessed_data, clustering_config):
             clustered_data[column], cluster_models[column] = perform_kmeans_clustering(preprocessed_data[column], params)
     
     # 2D Clustering
-    for column_pair, config in config.clustering_2d_config.items():
+    for column_pair, config in clustering_2d_config.items():
         method = config['method']
         params = config['params']
         
@@ -120,7 +120,7 @@ def load_clustering_models(models_directory):
             cluster_models[column] = joblib.load(model_path)
     return cluster_models
 
-def predict_cluster(data_point, cluster_models, clustering_config):
+def predict_cluster(data_point, cluster_models, clustering_config, clustering_2d_config):
     clusters = {}
     
     # 1D Clustering prediction
@@ -140,7 +140,7 @@ def predict_cluster(data_point, cluster_models, clustering_config):
             clusters[column] = 'unknown'
     
     # 2D Clustering prediction
-    for column_pair, config in config.clustering_2d_config.items():
+    for column_pair, config in clustering_2d_config.items():
         method = config['method']
         if method == 'None':
             clusters[column_pair] = 'label_0'
