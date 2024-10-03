@@ -12,7 +12,7 @@ from _0config import (
     config, MODELS_DIRECTORY, MODEL_CLASSES, HYPERPARAMETER_GRIDS, RANDOM_STATE,
     ENSEMBLE_CV_SPLITS, ENSEMBLE_CV_SHUFFLE, MODEL_CV_SPLITS, RANDOMIZED_SEARCH_ITERATIONS
 )
-from _2utility import debug_print, plot_prediction_vs_actual
+from _2misc_utils import debug_print, plot_prediction_vs_actual
 from _7metrics import calculate_metrics
 
 def get_model_instance(model_name):
