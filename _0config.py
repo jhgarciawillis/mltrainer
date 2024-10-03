@@ -25,7 +25,8 @@ OUTLIER_THRESHOLD = 3
 RANDOM_STATE = 42
 
 # Clustering parameters
-AVAILABLE_CLUSTERING_METHODS = ['DBSCAN', 'KMeans']
+AVAILABLE_CLUSTERING_METHODS = ['None', 'DBSCAN', 'KMeans']
+DEFAULT_CLUSTERING_METHOD = 'None'
 DBSCAN_PARAMETERS = {
     'eps': 0.5,
     'min_samples': 5
@@ -120,8 +121,9 @@ class Config:
         self.numerical_columns = []
         self.categorical_columns = []
         self.unused_columns = []
-        self.clustering_method = 'KMeans'
-        self.clustering_parameters = KMEANS_PARAMETERS
+        self.use_clustering = False
+        self.clustering_methods = {}
+        self.clustering_parameters = {}
         self.train_size = 0.8
         self.models_to_use = []
         self.tuning_method = 'None'
