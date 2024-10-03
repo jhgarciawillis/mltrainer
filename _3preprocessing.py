@@ -12,7 +12,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
 from sklearn.model_selection import train_test_split
 from _0config import config, MODELS_DIRECTORY, OUTLIER_THRESHOLD
-from _2utility import debug_print, check_and_remove_duplicate_columns, check_and_reset_indices, display_dataframe
+from _2misc_utils import debug_print, check_and_remove_duplicate_columns, check_and_reset_indices
 
 def load_and_preprocess_data(data, config):
     debug_print("Starting data preprocessing...")
@@ -181,11 +181,6 @@ def save_preprocessor(preprocessor, cluster_name, label):
         debug_print(f"Preprocessing components saved for cluster {cluster_name}, label {label}")
     else:
         debug_print(f"No preprocessor saved for cluster {cluster_name}, label {label} as it encountered an error.")
-
-def flatten_clustered_data(clustered_data):
-    return [(cluster_name, label, indices) 
-            for cluster_name, cluster_labels in clustered_data.items() 
-            for label, indices in cluster_labels.items()]
 
 def create_global_preprocessor(data):
     debug_print("Creating global preprocessor...")
