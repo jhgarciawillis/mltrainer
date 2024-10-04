@@ -65,6 +65,14 @@ def run_training_mode(user_config):
                 target=selected_columns['target']
             )
 
+            # After getting clustering configuration
+            if len(set(config.clustering_2d_columns)) != len(config.clustering_2d_columns):
+                st.error("Please select different columns for 2D clustering.")
+                return
+            if any(col in config.unused_columns for col in config.clustering_2d_columns):
+                st.error("Cannot use unused columns for clustering.")
+                return
+
             if st.button("Start Training"):
                 with st.spinner("Training in progress..."):
                     # Preprocess data
