@@ -1,12 +1,13 @@
 import numpy as np
 import pandas as pd
 import streamlit as st
+import plotly.graph_objects as go
+
 from sklearn.metrics import (
     mean_absolute_error, mean_squared_error, r2_score,
     explained_variance_score, max_error, median_absolute_error
 )
 from sklearn.inspection import PartialDependenceDisplay
-import plotly.graph_objects as go
 from _0config import config
 from _2misc_utils import debug_print, plot_feature_importance
 
