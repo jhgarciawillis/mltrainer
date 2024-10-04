@@ -3,7 +3,7 @@ import pandas as pd
 import os
 import joblib
 
-from _0config import config, STREAMLIT_APP_NAME, STREAMLIT_APP_ICON, TOOLTIPS, INFO_TEXTS
+from _0config import Config, STREAMLIT_APP_NAME, STREAMLIT_APP_ICON, TOOLTIPS, INFO_TEXTS
 from _2data_utils import load_data, display_data_info, handle_missing_values, auto_detect_column_types, display_column_selection, save_unused_data
 from _2ui_utils import display_metrics, get_user_inputs, get_training_inputs, display_clustering_options, select_2d_clustering_columns, get_prediction_inputs, create_tooltip, create_info_button
 from _2misc_utils import debug_print, validate_file_upload
@@ -31,7 +31,7 @@ def main():
     mode = st.sidebar.radio("Select Mode", ["Training", "Prediction"])
 
     # Initialize the Config object
-    config = config
+    config = Config()
 
     if mode == "Training":
         run_training_mode(config)
