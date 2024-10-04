@@ -31,11 +31,10 @@ def setup_logging(log_file):
     
     return logger
 
-def debug_print(logger, *args):
-    """Logs debugging information and displays it in Streamlit."""
+def debug_print(*args):
+    """Displays debugging information in Streamlit."""
     message = ' '.join(map(str, args))
-    logger.debug(message)
-    st.text(message)
+    st.text(f"DEBUG: {message}")
 
 def truncate_sheet_name(sheet_name, max_length=31):
     """Truncates Excel sheet names to the maximum length allowed by Excel."""
