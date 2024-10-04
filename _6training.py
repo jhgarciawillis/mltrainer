@@ -10,9 +10,11 @@ from sklearn.ensemble import VotingRegressor
 from sklearn.pipeline import Pipeline
 from _0config import (
     config, MODELS_DIRECTORY, MODEL_CLASSES, HYPERPARAMETER_GRIDS, RANDOM_STATE,
-    ENSEMBLE_CV_SPLITS, ENSEMBLE_CV_SHUFFLE, MODEL_CV_SPLITS, RANDOMIZED_SEARCH_ITERATIONS
+    ENSEMBLE_CV_SPLITS, ENSEMBLE_CV_SHUFFLE, MODEL_CV_SPLITS, RANDOMIZED_SEARCH_ITERATIONS,
+    TOOLTIPS, INFO_TEXTS
 )
 from _2misc_utils import debug_print, plot_prediction_vs_actual
+from _2ui_utils import create_tooltip, create_info_button
 from _7metrics import calculate_metrics
 
 def get_model_instance(model_name):
@@ -32,6 +34,9 @@ def create_pipeline(model, preprocessor):
 def tune_hyperparameters(model_name, model, x_train, y_train, preprocessor, tuning_strategy):
     """Tune the hyperparameters of the model."""
     st.write(f"Tuning hyperparameters for {model_name} using {tuning_strategy}")
+    create_tooltip(TOOLTIPS["hyperparameter_tuning"])
+    create_info_button("hyperparameter_tuning")
+    
     pipeline = create_pipeline(model, preprocessor)
     param_grid = {'model__' + key: value for key, value in HYPERPARAMETER_GRIDS[model_name].items()}
     
@@ -67,6 +72,7 @@ def save_model(model, filename, save_path=MODELS_DIRECTORY):
 
 def train_and_validate_models(data_splits, clustered_X_train_combined, clustered_X_test_combined, models_to_use, tuning_method):
     st.subheader("Training and Validating Models")
+    create_info_button("model_training_validation")
 
     all_models = {}
     ensemble_cv_results = {}
@@ -101,6 +107,7 @@ def train_and_validate_models(data_splits, clustered_X_train_combined, clustered
 
 def train_models_on_flattened_data(flattened_x_train, flattened_y_train, models_to_use, tuning_method, global_preprocessor):
     st.subheader("Training Models on Flattened Data")
+    create_info_button("flattened_data_training")
 
     flattened_models = {}
     flattened_cv_results = {}
@@ -129,6 +136,7 @@ def train_models_on_flattened_data(flattened_x_train, flattened_y_train, models_
 
 def create_ensemble_model(all_models, x_train, y_train, preprocessor, save_path=MODELS_DIRECTORY):
     st.subheader("Creating Ensemble Model")
+    create_info_button("ensemble_model")
 
     if not all_models:
         st.warning("No models available for ensembling.")
@@ -232,6 +240,7 @@ def load_trained_models(models_directory):
 
 def display_model_performance(all_evaluation_metrics):
     st.subheader("Model Performance")
+    create_info_button("model_performance")
     for cluster_key, cluster_metrics in all_evaluation_metrics.items():
         st.write(f"Cluster: {cluster_key}")
         for model_name, metrics in cluster_metrics.items():
