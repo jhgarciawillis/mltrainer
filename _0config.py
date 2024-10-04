@@ -130,7 +130,8 @@ TOOLTIPS = {
     "upload_models": "Upload trained model files (in joblib format).",
     "upload_preprocessor": "Upload the preprocessor used for data transformation.",
     "new_data_file": "Upload a CSV file containing new data for prediction.",
-    "auto_detect_column_types": "Automatically detect the column types in the dataset."
+    "auto_detect_column_types": "Automatically detect the column types in the dataset.",
+    "manual_column_selection": "Manually select the column types for your dataset."
 }
 
 # Detailed information for UI sections
