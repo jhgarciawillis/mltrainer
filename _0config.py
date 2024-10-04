@@ -136,6 +136,7 @@ class Config:
         self.uploaded_preprocessor = None
         self.new_data_file = None
         self.STREAMLIT_APP_NAME = STREAMLIT_APP_NAME
+        self.outlier_removal_columns = []  # New attribute for outlier removal
 
     def update(self, **kwargs):
         for key, value in kwargs.items():
@@ -158,6 +159,9 @@ class Config:
 
     def set_2d_clustering_columns(self, columns):
         self.clustering_2d_columns = columns
+
+    def update_outlier_removal_columns(self, columns):
+        self.outlier_removal_columns = columns
 
 # Initialize global configuration
 config = Config()
