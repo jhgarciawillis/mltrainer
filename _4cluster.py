@@ -1,11 +1,11 @@
 import numpy as np
 import pandas as pd
 import streamlit as st
-import joblib
 import os
 
 from sklearn.cluster import DBSCAN, KMeans
 from sklearn.preprocessing import StandardScaler
+import joblib
 from _0config import config, CLUSTERS_PATH, MODELS_DIRECTORY
 from _2misc_utils import debug_print
 
@@ -29,19 +29,19 @@ def create_clusters(preprocessed_data, clustering_config, clustering_2d_config):
             clustered_data[column], cluster_models[column] = perform_kmeans_clustering(preprocessed_data[column], params)
     
     # 2D Clustering
-    valid_columns = set(config.numerical_columns) - set(config.unused_columns)
-    filtered_clustering_2d_config = {k: v for k, v in clustering_2d_config.items() if all(col in valid_columns for col in k)}
-    
-    for column_pair, config in filtered_clustering_2d_config.items():
-        method = config['method']
-        params = config['params']
-        
-        if method == 'None':
-            clustered_data[column_pair] = {'label_0': preprocessed_data.index}
-        elif method == 'DBSCAN':
-            clustered_data[column_pair], cluster_models[column_pair] = perform_2d_clustering(preprocessed_data[list(column_pair)], method, params)
-        elif method == 'KMeans':
-            clustered_data[column_pair], cluster_models[column_pair] = perform_2d_clustering(preprocessed_data[list(column_pair)], method, params)
+    for column_pair, config in clustering_2d_config.items():
+        if set(column_pair).issubset(set(preprocessed_data.columns)):
+            method = config['method']
+            params = config['params']
+            
+            if method == 'None':
+                clustered_data[column_pair] = {'label_0': preprocessed_data.index}
+            elif method == 'DBSCAN':
+                clustered_data[column_pair], cluster_models[column_pair] = perform_2d_clustering(preprocessed_data[list(column_pair)], method, params)
+            elif method == 'KMeans':
+                clustered_data[column_pair], cluster_models[column_pair] = perform_2d_clustering(preprocessed_data[list(column_pair)], method, params)
+        else:
+            st.warning(f"Skipping 2D clustering for {column_pair} as one or more columns are not present in the data.")
     
     # Save cluster models
     save_clustering_models(cluster_models, MODELS_DIRECTORY)
