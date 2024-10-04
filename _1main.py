@@ -1,5 +1,6 @@
 import streamlit as st
 
+from _0config import config, STREAMLIT_APP_NAME, STREAMLIT_APP_ICON
 from _2data_utils import load_data, display_data_info, handle_missing_values, auto_detect_column_types, display_column_selection, save_unused_data
 from _2ui_utils import set_streamlit_theme, display_metrics, get_user_inputs, get_training_inputs, display_clustering_options, select_2d_clustering_columns, get_prediction_inputs
 from _2misc_utils import debug_print, validate_file_upload
@@ -16,8 +17,8 @@ from _8prediction import PredictionProcessor, load_saved_models, predict_for_new
 def main():
     set_streamlit_theme()
     st.set_page_config(
-        page_title=config.STREAMLIT_APP_NAME,
-        page_icon=config.STREAMLIT_APP_ICON,
+        page_title=STREAMLIT_APP_NAME,
+        page_icon=STREAMLIT_APP_ICON,
         layout="wide",
         initial_sidebar_state="expanded",
     )
@@ -65,7 +66,7 @@ def run_training_mode(user_config):
                     
                     # Create clusters if clustering is enabled
                     if user_config.use_clustering:
-                        clustered_data = create_clusters(preprocessed_data, user_config.clustering_config)
+                        clustered_data = create_clusters(preprocessed_data, user_config.clustering_config, user_config.clustering_2d_config)
                     else:
                         clustered_data = {'no_cluster': {'label_0': preprocessed_data.index}}
                     
@@ -92,12 +93,12 @@ def run_training_mode(user_config):
                     )
                     
                     # Save models and unused data
-                    save_trained_models(all_models, MODELS_DIRECTORY)
-                    save_unused_data(data[config.unused_columns], os.path.join(MODELS_DIRECTORY, "unused_data.csv"))
+                    save_trained_models(all_models, config.MODELS_DIRECTORY)
+                    save_unused_data(data[config.unused_columns], os.path.join(config.MODELS_DIRECTORY, "unused_data.csv"))
                     
                     # Save clustering configuration
-                    joblib.dump(user_config.clustering_config, os.path.join(MODELS_DIRECTORY, "clustering_config.joblib"))
-                    joblib.dump(config.clustering_2d_config, os.path.join(MODELS_DIRECTORY, "clustering_2d_config.joblib"))
+                    joblib.dump(user_config.clustering_config, os.path.join(config.MODELS_DIRECTORY, "clustering_config.joblib"))
+                    joblib.dump(config.clustering_2d_config, os.path.join(config.MODELS_DIRECTORY, "clustering_2d_config.joblib"))
                     
                     st.success("Training completed successfully!")
                     
@@ -119,11 +120,11 @@ def run_prediction_mode(user_config):
     if user_config.use_saved_models == "Yes":
         # Load saved models and preprocessors
         with st.spinner("Loading saved models and preprocessors..."):
-            all_models = load_saved_models(MODELS_DIRECTORY)
-            global_preprocessor = load_global_preprocessor(MODELS_DIRECTORY)
-            clustering_config = joblib.load(os.path.join(MODELS_DIRECTORY, "clustering_config.joblib"))
-            clustering_2d_config = joblib.load(os.path.join(MODELS_DIRECTORY, "clustering_2d_config.joblib"))
-            cluster_models = load_clustering_models(MODELS_DIRECTORY)
+            all_models = load_saved_models(config.MODELS_DIRECTORY)
+            global_preprocessor = load_global_preprocessor(config.MODELS_DIRECTORY)
+            clustering_config = joblib.load(os.path.join(config.MODELS_DIRECTORY, "clustering_config.joblib"))
+            clustering_2d_config = joblib.load(os.path.join(config.MODELS_DIRECTORY, "clustering_2d_config.joblib"))
+            cluster_models = load_clustering_models(config.MODELS_DIRECTORY)
             st.success("Models and preprocessors loaded successfully.")
     else:
         # Use uploaded models and preprocessors
