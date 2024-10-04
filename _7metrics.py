@@ -8,8 +8,9 @@ from sklearn.metrics import (
     explained_variance_score, max_error, median_absolute_error
 )
 from sklearn.inspection import PartialDependenceDisplay
-from _0config import config
+from _0config import config, TOOLTIPS, INFO_TEXTS
 from _2misc_utils import debug_print, plot_feature_importance
+from _2ui_utils import create_tooltip, create_info_button
 
 def calculate_metrics(y_true, y_pred):
     """Calculate regression metrics."""
@@ -37,6 +38,8 @@ def calculate_metrics(y_true, y_pred):
 def display_metrics(metrics, title="Model Metrics"):
     """Display metrics in Streamlit."""
     st.subheader(title)
+    create_tooltip(TOOLTIPS["model_metrics"])
+    create_info_button("model_metrics")
     for metric_name, metric_value in metrics.items():
         st.metric(label=metric_name, value=f"{metric_value:.4f}")
 
@@ -88,6 +91,7 @@ def plot_partial_dependence(model, X, features):
 def evaluate_model(model, X_test, y_test):
     """Evaluate the model and display various metrics and plots."""
     st.subheader("Model Evaluation")
+    create_info_button("model_evaluation")
     
     y_pred = model.predict(X_test)
     metrics = calculate_metrics(y_test, y_pred)
@@ -116,6 +120,7 @@ def calculate_feature_correlations(X, y):
 def display_feature_correlations(correlations):
     """Display feature correlations in Streamlit."""
     st.subheader("Feature Correlations with Target")
+    create_tooltip(TOOLTIPS["feature_correlations"])
     fig = go.Figure(go.Bar(
         x=correlations.values,
         y=correlations.index,
@@ -143,6 +148,7 @@ def evaluate_predictions(y_true, y_pred, cluster_name=None):
 def compare_models(models_metrics):
     """Compare multiple models based on their metrics."""
     st.subheader("Model Comparison")
+    create_info_button("model_comparison")
     
     comparison_df = pd.DataFrame(models_metrics).T
     st.dataframe(comparison_df)
@@ -172,6 +178,7 @@ def calculate_cluster_metrics(clustered_predictions, y_true):
 def display_cluster_metrics(cluster_metrics):
     """Display metrics for each cluster."""
     st.subheader("Cluster-wise Metrics")
+    create_info_button("cluster_metrics")
     for cluster, metrics in cluster_metrics.items():
         st.write(f"Cluster: {cluster}")
         display_metrics(metrics)
