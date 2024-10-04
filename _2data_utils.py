@@ -122,4 +122,4 @@ def display_dataframe(df, title="DataFrame"):
     start_idx = (page_number - 1) * page_size
     end_idx = min(start_idx + page_size, len(df))
     st.dataframe(df.iloc[start_idx:end_idx])
-    st.write(f"Showing rows {start_idx+1} to {end_idx} of {len(df)}")
+    st.write(f"Showing rows {start_idx+1} to {end_idx} of {len(df)}")</code>
