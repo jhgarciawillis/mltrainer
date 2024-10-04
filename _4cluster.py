@@ -1,10 +1,11 @@
 import numpy as np
 import pandas as pd
 import streamlit as st
-from sklearn.cluster import DBSCAN, KMeans
-from sklearn.preprocessing import StandardScaler
 import joblib
 import os
+
+from sklearn.cluster import DBSCAN, KMeans
+from sklearn.preprocessing import StandardScaler
 from _0config import config, CLUSTERS_PATH, MODELS_DIRECTORY
 from _2misc_utils import debug_print
 
@@ -28,7 +29,10 @@ def create_clusters(preprocessed_data, clustering_config, clustering_2d_config):
             clustered_data[column], cluster_models[column] = perform_kmeans_clustering(preprocessed_data[column], params)
     
     # 2D Clustering
-    for column_pair, config in clustering_2d_config.items():
+    valid_columns = set(config.numerical_columns) - set(config.unused_columns)
+    filtered_clustering_2d_config = {k: v for k, v in clustering_2d_config.items() if all(col in valid_columns for col in k)}
+    
+    for column_pair, config in filtered_clustering_2d_config.items():
         method = config['method']
         params = config['params']
         
@@ -85,9 +89,12 @@ def perform_kmeans_clustering(data, parameters):
 def perform_2d_clustering(data, method, parameters):
     st.write(f"Performing 2D {method} clustering")
     
+    # Ensure only specified columns are used
+    data_subset = data[list(data.columns)]
+    
     # Standardize the features
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(data)
+    X_scaled = scaler.fit_transform(data_subset)
     
     if method == 'DBSCAN':
         model = DBSCAN(**parameters)
@@ -101,7 +108,7 @@ def perform_2d_clustering(data, method, parameters):
     unique_labels = np.unique(cluster_labels)
     st.write(f"2D {method} clustering done. Number of clusters: {len(unique_labels)}")
     
-    clusters = {f'label_{label}': data.index[cluster_labels == label].tolist() for label in unique_labels}
+    clusters = {f'label_{label}': data_subset.index[cluster_labels == label].tolist() for label in unique_labels}
     return clusters, model
 
 def generate_2d_cluster_filename(column_pair, method):
