@@ -1,3 +1,4 @@
+import pandas as pd
 import streamlit as st
 from _0config import (STREAMLIT_THEME, AVAILABLE_CLUSTERING_METHODS, DBSCAN_PARAMETERS, KMEANS_PARAMETERS, 
                       MODEL_CLASSES, config, STREAMLIT_APP_NAME, CHART_WIDTH)
@@ -68,9 +69,13 @@ def get_training_inputs():
             config.update(file_path=uploaded_file)
             
             if uploaded_file.name.endswith('.xlsx'):
-                xls = pd.ExcelFile(uploaded_file)
-                sheet_name = st.selectbox("Select sheet", xls.sheet_names)
-                config.update(sheet_name=sheet_name)
+                try:
+                    xls = pd.ExcelFile(uploaded_file)
+                    sheet_name = st.selectbox("Select sheet", xls.sheet_names)
+                    config.update(sheet_name=sheet_name)
+                except Exception as e:
+                    st.error(f"Error reading Excel file: {str(e)}")
+                    return None
         
         train_size = st.slider("Select percentage of data for training", 0.1, 0.9, 0.8)
         config.update(train_size=train_size)
