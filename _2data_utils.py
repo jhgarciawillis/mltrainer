@@ -38,6 +38,8 @@ def handle_missing_values(df):
         strategy = st.selectbox("Choose a strategy to handle missing values:", 
                                ["Drop rows", "Fill with mean/mode", "Fill with median"])
         
+        create_tooltip(TOOLTIPS["handle_missing_values"])
+        
         if strategy == "Drop rows":
             df = df.dropna()
             st.success("Rows with missing values have been dropped.")
