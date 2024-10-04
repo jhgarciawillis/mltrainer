@@ -26,7 +26,6 @@ st.set_page_config(
 )
 
 def main():
-
     st.title(STREAMLIT_APP_NAME)
 
     # Mode selection
@@ -65,7 +64,7 @@ def run_training_mode(user_config):
                 target=selected_columns['target']
             )
 
-            # After getting clustering configuration
+            # Validate 2D clustering columns
             if len(set(config.clustering_2d_columns)) != len(config.clustering_2d_columns):
                 st.error("Please select different columns for 2D clustering.")
                 return
