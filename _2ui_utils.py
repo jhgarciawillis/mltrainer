@@ -53,67 +53,13 @@ def display_metrics(metrics):
         else:
             col2.metric(metric, f"{value:.4f}")
 
-def get_user_inputs(mode):
-    """Get user inputs for both Training and Prediction modes."""
-    if mode == "Training":
-        return get_training_inputs()
-    else:
-        return get_prediction_inputs()
-
-def get_training_inputs():
-    """Get user inputs for Training mode."""
-    st.header("Training Configuration")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        uploaded_file = st.file_uploader("Choose a CSV or Excel file", type=["csv", "xlsx"])
-        if uploaded_file is not None:
-            config.update(file_path=uploaded_file)
-            
-            if uploaded_file.name.endswith('.xlsx'):
-                try:
-                    xls = pd.ExcelFile(uploaded_file)
-                    sheet_name = st.selectbox("Select sheet", xls.sheet_names, key='sheet_select')
-                    config.update(sheet_name=sheet_name)
-                except Exception as e:
-                    st.error(f"Error reading Excel file: {str(e)}")
-                    return None
-        
-        train_size = st.slider("Select percentage of data for training", 0.1, 0.9, 0.8, key='train_size_slider')
-        config.update(train_size=train_size)
-    
-    with col2:
-        use_clustering = st.checkbox("Use clustering", value=False, key='use_clustering_checkbox')
-        config.update(use_clustering=use_clustering)
-    
-    display_column_selection()
-    
-    if use_clustering:
-        display_clustering_options()
-    
-    col3, col4 = st.columns(2)
-    
-    with col3:
-        models_to_use = st.multiselect("Select models to use", list(MODEL_CLASSES.keys()), key='models_multiselect')
-        config.update(models_to_use=models_to_use)
-        st.info("ℹ️ Select one or more machine learning models to train on your data.")
-    
-    with col4:
-        tuning_method = st.selectbox("Select tuning method", ["None", "GridSearchCV", "RandomizedSearchCV"], key='tuning_method_select')
-        config.update(tuning_method=tuning_method)
-        st.info("ℹ️ Choose a method for hyperparameter tuning. 'None' uses default parameters.")
-    
-    return config
-
-def display_column_selection():
+def display_column_selection(columns):
     st.subheader("Column Selection")
     
-    columns = config.all_columns
     column_types = {}
     outlier_removal = {}
     
-    col1, col2, col3 = st.columns([2, 2, 1])
+    col1, col2 = st.columns([2, 1])
     
     for i, col in enumerate(columns):
         with col1:
@@ -131,13 +77,7 @@ def display_column_selection():
             if column_types[col] == 'numerical':
                 outlier_removal[col] = st.checkbox(f"Remove outliers for {col}", key=f'outlier_{i}')
     
-    numerical_columns = [col for col, type in column_types.items() if type == 'numerical']
-    categorical_columns = [col for col, type in column_types.items() if type == 'categorical']
-    unused_columns = [col for col, type in column_types.items() if type == 'unused']
-    target_column = next((col for col, type in column_types.items() if type == 'target'), None)
-    
-    config.set_column_types(numerical_columns, categorical_columns, unused_columns, target_column)
-    config.update_outlier_removal_columns({col: remove for col, remove in outlier_removal.items() if remove})
+    return column_types, outlier_removal
 
 def display_clustering_options():
     """Display options for clustering configuration."""
