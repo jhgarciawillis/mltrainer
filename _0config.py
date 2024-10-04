@@ -136,7 +136,7 @@ class Config:
         self.uploaded_preprocessor = None
         self.new_data_file = None
         self.STREAMLIT_APP_NAME = STREAMLIT_APP_NAME
-        self.outlier_removal_columns = {}  # Will store {column: bool} for outlier removal
+        self.outlier_removal_columns = []  # New attribute for outlier removal
 
     def update(self, **kwargs):
         for key, value in kwargs.items():
