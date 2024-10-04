@@ -134,16 +134,19 @@ def select_2d_clustering_columns():
     """Allow users to select pairs of columns for 2D clustering."""
     st.write("Select column pairs for 2D clustering:")
     col_pairs = []
-    num_pairs = st.number_input("Number of column pairs for 2D clustering", min_value=0, max_value=len(config.numerical_columns)//2, value=0)
+    valid_columns = [col for col in config.numerical_columns if col not in config.unused_columns]
+    num_pairs = st.number_input("Number of column pairs for 2D clustering", min_value=0, max_value=len(valid_columns)//2, value=0)
     
     for i in range(num_pairs):
-        col1 = st.selectbox(f"Select first column for pair {i+1}", config.numerical_columns, key=f"2d_cluster_col1_{i}")
-        col2 = st.selectbox(f"Select second column for pair {i+1}", config.numerical_columns, key=f"2d_cluster_col2_{i}")
+        col1 = st.selectbox(f"Select first column for pair {i+1}", valid_columns, key=f"2d_cluster_col1_{i}")
+        remaining_columns = [col for col in valid_columns if col != col1]
+        col2 = st.selectbox(f"Select second column for pair {i+1}", remaining_columns, key=f"2d_cluster_col2_{i}")
         if col1 != col2:
             col_pairs.append((col1, col2))
         else:
             st.warning(f"Pair {i+1}: Please select different columns.")
     
+    config.set_2d_clustering_columns([col for pair in col_pairs for col in pair])
     return col_pairs
 
 def get_prediction_inputs():
