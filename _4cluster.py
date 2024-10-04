@@ -1,11 +1,10 @@
 import numpy as np
 import pandas as pd
 import streamlit as st
-import os
-
 from sklearn.cluster import DBSCAN, KMeans
 from sklearn.preprocessing import StandardScaler
 import joblib
+import os
 from _0config import config, CLUSTERS_PATH, MODELS_DIRECTORY
 from _2misc_utils import debug_print
 
