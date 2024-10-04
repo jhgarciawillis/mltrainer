@@ -16,7 +16,13 @@ from _2misc_utils import debug_print, flatten_clustered_data
 
 def load_and_preprocess_data(data, config):
     debug_print("Starting data preprocessing...")
-    preprocessed_data = remove_outliers(data, config.numerical_columns, OUTLIER_THRESHOLD)
+    
+    # Perform outlier removal only on selected columns
+    if config.outlier_removal_columns:
+        preprocessed_data = remove_outliers(data, config.outlier_removal_columns, OUTLIER_THRESHOLD)
+    else:
+        preprocessed_data = data.copy()
+    
     preprocessed_data = convert_to_numeric(preprocessed_data, config.numerical_columns)
     return preprocessed_data
 
@@ -24,7 +30,8 @@ def remove_outliers(data, columns, threshold):
     debug_print(f"Removing outliers based on Z-scores in columns: {columns}")
     initial_shape = data.shape
     z_scores = np.abs(zscore(data[columns].astype(float), nan_policy='omit'))
-    data = data[(z_scores < threshold).all(axis=1)].copy()
+    mask = (z_scores < threshold).all(axis=1)
+    data = data[mask].copy()
     debug_print(f"Outliers removed. Data shape changed from {initial_shape} to {data.shape}")
     return data
 
