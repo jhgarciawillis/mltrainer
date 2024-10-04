@@ -131,7 +131,14 @@ TOOLTIPS = {
     "upload_preprocessor": "Upload the preprocessor used for data transformation.",
     "new_data_file": "Upload a CSV file containing new data for prediction.",
     "auto_detect_column_types": "Automatically detect the column types in the dataset.",
-    "manual_column_selection": "Manually select the column types for your dataset."
+    "manual_column_selection": "Manually select the column types for your dataset.",
+    "handle_missing_values": "Choose a strategy to handle missing values in your dataset.",
+    "outlier_removal": "Identify and remove data points that significantly differ from other observations.",
+    "polynomial_features": "Generate polynomial features to capture non-linear relationships.",
+    "interaction_terms": "Create interaction features between numerical and categorical columns.",
+    "statistical_features": "Calculate statistical features like mean, median, and standard deviation.",
+    "random_state": "Set the random state for reproducibility of the machine learning models.",
+    "cv_folds": "Specify the number of cross-validation folds to use during model training."
 }
 
 # Detailed information for UI sections
@@ -144,7 +151,14 @@ INFO_TEXTS = {
     "outlier_removal": "Outlier removal is the process of identifying and removing data points that significantly differ from other observations. This can improve model performance by reducing the impact of anomalous data.",
     "load_saved_models": "Loading saved models allows you to use previously trained models for making predictions on new data without having to retrain them.",
     "upload_prediction_data": "Upload new data on which you want to make predictions using your trained models.",
-    "make_predictions": "Use your trained models to generate predictions for the new data you've uploaded."
+    "make_predictions": "Use your trained models to generate predictions for the new data you've uploaded.",
+    "manual_column_selection": "Manually select the column types for your dataset. This allows you to specify which columns should be treated as numerical, categorical, target, or unused.",
+    "handle_missing_values": "Choose a strategy to handle missing values in your dataset. This can include dropping rows with missing values, filling with the mean/mode, or filling with the median.",
+    "polynomial_features": "Generating polynomial features can capture non-linear relationships in your data, potentially improving model performance.",
+    "interaction_terms": "Creating interaction features between numerical and categorical columns can help the model learn more complex patterns in the data.",
+    "statistical_features": "Calculating statistical features like mean, median, and standard deviation can provide additional information to the machine learning models.",
+    "random_state": "Setting the random state ensures reproducibility of the machine learning models, so that the results can be replicated.",
+    "cv_folds": "The number of cross-validation folds determines how the dataset is split during model training and validation, which can affect the model's generalization performance."
 }
 
 class Config:
