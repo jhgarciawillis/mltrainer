@@ -1,8 +1,11 @@
 import streamlit as st
+import pandas as pd
+import os
+import joblib
 
 from _0config import config, STREAMLIT_APP_NAME, STREAMLIT_APP_ICON
 from _2data_utils import load_data, display_data_info, handle_missing_values, auto_detect_column_types, display_column_selection, save_unused_data
-from _2ui_utils import set_streamlit_theme, display_metrics, get_user_inputs, get_training_inputs, display_clustering_options, select_2d_clustering_columns, get_prediction_inputs
+from _2ui_utils import display_metrics, get_user_inputs, get_training_inputs, display_clustering_options, select_2d_clustering_columns, get_prediction_inputs
 from _2misc_utils import debug_print, validate_file_upload
 
 from _3preprocessing import load_and_preprocess_data, split_and_preprocess_data, create_global_preprocessor, save_global_preprocessor, load_global_preprocessor
@@ -15,13 +18,14 @@ from _7metrics import calculate_metrics, display_metrics, plot_residuals, plot_a
 from _8prediction import PredictionProcessor, load_saved_models, predict_for_new_data
 
 def main():
-    set_streamlit_theme()
     st.set_page_config(
         page_title=STREAMLIT_APP_NAME,
         page_icon=STREAMLIT_APP_ICON,
         layout="wide",
         initial_sidebar_state="expanded",
     )
+
+    st.title(STREAMLIT_APP_NAME)
 
     # Mode selection
     mode = st.radio("Select Mode", ["Training", "Prediction"])
