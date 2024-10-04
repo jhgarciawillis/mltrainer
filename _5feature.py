@@ -5,8 +5,9 @@ import streamlit as st
 from itertools import combinations
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.feature_selection import SelectKBest, f_regression
-from _0config import config, MAX_INTERACTION_DEGREE, STATISTICAL_AGG_FUNCTIONS, TOP_K_FEATURES, POLYNOMIAL_DEGREE
+from _0config import config, MAX_INTERACTION_DEGREE, STATISTICAL_AGG_FUNCTIONS, TOP_K_FEATURES, POLYNOMIAL_DEGREE, TOOLTIPS, INFO_TEXTS
 from _2misc_utils import debug_print, plot_feature_importance, flatten_clustered_data
+from _2ui_utils import create_tooltip, create_info_button
 
 def generate_polynomial_features(X, degree=POLYNOMIAL_DEGREE):
     numerical_cols = config.numerical_columns
@@ -16,6 +17,7 @@ def generate_polynomial_features(X, degree=POLYNOMIAL_DEGREE):
         return pd.DataFrame(index=X.index)
 
     st.write(f"Generating polynomial features with degree {degree}")
+    create_tooltip(TOOLTIPS["polynomial_features"])
     poly = PolynomialFeatures(degree=degree, include_bias=False)
     X_poly = poly.fit_transform(X_numeric)
     feature_names = poly.get_feature_names_out(X_numeric.columns)
@@ -34,6 +36,7 @@ def generate_interaction_terms(X, max_degree=MAX_INTERACTION_DEGREE):
         return pd.DataFrame(index=X.index)
 
     st.write(f"Generating interaction terms with max degree {max_degree}")
+    create_tooltip(TOOLTIPS["interaction_terms"])
     interaction_columns = []
     
     # Numeric-Numeric interactions
@@ -66,6 +69,7 @@ def generate_statistical_features(X):
         return pd.DataFrame(index=X.index)
 
     st.write(f"Generating statistical features using functions: {STATISTICAL_AGG_FUNCTIONS}")
+    create_tooltip(TOOLTIPS["statistical_features"])
     new_features = pd.DataFrame(index=X.index)
     for func in STATISTICAL_AGG_FUNCTIONS:
         new_features[f"{func}_all"] = X_numeric.agg(func, axis=1)
@@ -75,6 +79,7 @@ def generate_statistical_features(X):
 
 def apply_feature_generation(data_splits, feature_generation_functions):
     st.subheader("Applying Feature Generation")
+    create_info_button("feature_generation")
     clustered_X_train_combined = {}
     clustered_X_test_combined = {}
 
@@ -135,6 +140,7 @@ def select_top_features(X, y, k=TOP_K_FEATURES):
         return X
     
     st.write(f"Selecting top {k} features")
+    create_tooltip(TOOLTIPS["feature_selection"])
     selector = SelectKBest(score_func=f_regression, k=min(k, X_numeric.shape[1]))
     X_selected = selector.fit_transform(X_numeric, y)
     selected_feature_mask = selector.get_support()
@@ -158,6 +164,7 @@ def select_top_features(X, y, k=TOP_K_FEATURES):
 
 def combine_feature_engineered_data(data_splits, clustered_X_train_combined, clustered_X_test_combined):
     st.subheader("Combining Feature Engineered Data")
+    create_info_button("combine_features")
     flattened_data_splits = flatten_clustered_data(data_splits)
     for cluster_key in flattened_data_splits.keys():
         X_train = clustered_X_train_combined[cluster_key]
@@ -189,6 +196,7 @@ def combine_feature_engineered_data(data_splits, clustered_X_train_combined, clu
 
 def generate_features_for_prediction(X, feature_generation_functions):
     st.subheader("Generating Features for Prediction")
+    create_info_button("prediction_features")
     new_features = pd.DataFrame(index=X.index)
 
     for feature_gen_func in feature_generation_functions:
@@ -208,6 +216,7 @@ def generate_features_for_prediction(X, feature_generation_functions):
 
 def display_feature_info(clustered_X_train_combined, clustered_X_test_combined):
     st.subheader("Feature Information")
+    create_info_button("feature_info")
     flattened_data_splits = flatten_clustered_data(clustered_X_train_combined)
     for cluster_key in flattened_data_splits.keys():
         st.write(f"Cluster: {cluster_key}")
@@ -218,6 +227,7 @@ def display_feature_info(clustered_X_train_combined, clustered_X_test_combined):
 
 def plot_feature_correlations(X, y):
     st.subheader("Feature Correlations with Target")
+    create_info_button("feature_correlations")
     correlations = X.apply(lambda x: x.corr(y) if x.dtype in ['int64', 'float64'] else 0)
     correlations = correlations.sort_values(ascending=False)
     
