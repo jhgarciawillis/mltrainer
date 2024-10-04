@@ -93,6 +93,8 @@ def get_training_inputs():
         tuning_method = st.selectbox("Select tuning method", ["None", "GridSearchCV", "RandomizedSearchCV"])
         config.update(tuning_method=tuning_method)
     
+    display_outlier_removal_options()
+    
     return config
 
 def display_clustering_options():
@@ -118,17 +120,19 @@ def display_clustering_options():
     # 2D Clustering
     st.write("2D Clustering Options:")
     col_pairs = select_2d_clustering_columns()
-    for i, pair in enumerate(col_pairs):
-        method = st.selectbox(f"Select clustering method for {pair}", AVAILABLE_CLUSTERING_METHODS, key=f"cluster_method_{i}")
+    for pair in col_pairs:
+        method = st.selectbox(f"Select clustering method for {pair}", AVAILABLE_CLUSTERING_METHODS, key=f"cluster_method_{pair}")
         if method != 'None':
             if method == 'DBSCAN':
-                eps = st.slider(f"DBSCAN eps for {pair}", 0.1, 1.0, DBSCAN_PARAMETERS['eps'], key=f"dbscan_eps_{i}")
-                min_samples = st.slider(f"DBSCAN min_samples for {pair}", 2, 10, DBSCAN_PARAMETERS['min_samples'], key=f"dbscan_min_samples_{i}")
+                eps = st.slider(f"DBSCAN eps for {pair}", 0.1, 1.0, DBSCAN_PARAMETERS['eps'], key=f"dbscan_eps_{pair}")
+                min_samples = st.slider(f"DBSCAN min_samples for {pair}", 2, 10, DBSCAN_PARAMETERS['min_samples'], key=f"dbscan_min_samples_{pair}")
                 params = {'eps': eps, 'min_samples': min_samples}
             elif method == 'KMeans':
-                n_clusters = st.slider(f"KMeans n_clusters for {pair}", 2, 10, KMEANS_PARAMETERS['n_clusters'], key=f"kmeans_n_clusters_{i}")
+                n_clusters = st.slider(f"KMeans n_clusters for {pair}", 2, 10, KMEANS_PARAMETERS['n_clusters'], key=f"kmeans_n_clusters_{pair}")
                 params = {'n_clusters': n_clusters}
             config.set_2d_clustering([pair], method, params)
+        else:
+            config.set_2d_clustering([pair], 'None', {})
 
 def select_2d_clustering_columns():
     """Allow users to select pairs of columns for 2D clustering."""
@@ -148,6 +152,15 @@ def select_2d_clustering_columns():
     
     config.set_2d_clustering_columns([col for pair in col_pairs for col in pair])
     return col_pairs
+
+def display_outlier_removal_options():
+    """Display options for outlier removal."""
+    st.subheader("Outlier Removal Options")
+    outlier_columns = []
+    for col in config.numerical_columns:
+        if st.checkbox(f"Remove outliers for {col}", key=f"outlier_{col}"):
+            outlier_columns.append(col)
+    config.update_outlier_removal_columns(outlier_columns)
 
 def get_prediction_inputs():
     """Get user inputs for Prediction mode."""
