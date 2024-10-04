@@ -112,6 +112,38 @@ MAX_ROWS_TO_DISPLAY = 100
 CHART_HEIGHT = 400
 CHART_WIDTH = 600
 
+# Tooltips for UI elements
+TOOLTIPS = {
+    "file_upload": "Upload your dataset in CSV or Excel format.",
+    "sheet_selection": "Select the sheet containing your data (for Excel files).",
+    "train_test_split": "Set the proportion of data to use for training. The rest will be used for testing.",
+    "use_clustering": "Enable clustering to group similar data points before training models.",
+    "models_to_use": "Select one or more machine learning models to train on your data.",
+    "tuning_method": "Choose a method for optimizing model hyperparameters.",
+    "clustering_method": "Select a clustering algorithm to apply to this column.",
+    "dbscan_eps": "Set the maximum distance between two samples for them to be considered as in the same neighborhood.",
+    "dbscan_min_samples": "Set the number of samples in a neighborhood for a point to be considered as a core point.",
+    "kmeans_n_clusters": "Set the number of clusters to form and centroids to generate.",
+    "2d_clustering": "Select pairs of columns for two-dimensional clustering.",
+    "use_saved_models": "Choose whether to use previously saved models or upload new ones.",
+    "upload_models": "Upload trained model files (in joblib format).",
+    "upload_preprocessor": "Upload the preprocessor used for data transformation.",
+    "new_data_file": "Upload a CSV file containing new data for prediction."
+}
+
+# Detailed information for UI sections
+INFO_TEXTS = {
+    "data_preprocessing": "Data preprocessing involves cleaning and transforming raw data into a format suitable for machine learning models. This includes handling missing values, encoding categorical variables, and scaling numerical features.",
+    "feature_engineering": "Feature engineering is the process of using domain knowledge to create new features or transform existing ones. This can improve model performance by providing more relevant information to the algorithms.",
+    "clustering_configuration": "Clustering is an unsupervised learning technique that groups similar data points together. It can be used to segment your data before applying regression models, potentially improving overall performance.",
+    "model_selection_training": "In this section, you can choose which machine learning models to train on your data. You can also select a method for tuning the hyperparameters of these models to optimize their performance.",
+    "advanced_options": "Advanced options allow you to fine-tune various aspects of the machine learning pipeline, such as the random state for reproducibility and the number of cross-validation folds.",
+    "outlier_removal": "Outlier removal is the process of identifying and removing data points that significantly differ from other observations. This can improve model performance by reducing the impact of anomalous data.",
+    "load_saved_models": "Loading saved models allows you to use previously trained models for making predictions on new data without having to retrain them.",
+    "upload_prediction_data": "Upload new data on which you want to make predictions using your trained models.",
+    "make_predictions": "Use your trained models to generate predictions for the new data you've uploaded."
+}
+
 class Config:
     def __init__(self):
         self.file_path = None
