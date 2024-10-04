@@ -166,4 +166,3 @@ def run_prediction_mode(user_config):
 
 if __name__ == "__main__":
     main()
-    debug_print("Script completed")
