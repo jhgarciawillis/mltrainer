@@ -26,7 +26,6 @@ st.set_page_config(
 )
 
 def main():
-    debug_print("Starting main function")
 
     st.title(STREAMLIT_APP_NAME)
 
@@ -166,6 +165,5 @@ def run_prediction_mode(user_config):
         st.success("Predictions generated successfully!")
 
 if __name__ == "__main__":
-    debug_print("Script started")
     main()
     debug_print("Script completed")
