@@ -5,7 +5,7 @@ import joblib
 
 from _0config import config, STREAMLIT_APP_NAME, STREAMLIT_APP_ICON
 from _2data_utils import load_data, display_data_info, handle_missing_values, auto_detect_column_types, display_column_selection, save_unused_data
-from _2ui_utils import display_metrics, get_user_inputs, display_clustering_options, select_2d_clustering_columns, get_prediction_inputs
+from _2ui_utils import display_metrics, get_user_inputs, get_training_inputs, display_clustering_options, select_2d_clustering_columns, get_prediction_inputs
 from _2misc_utils import debug_print, validate_file_upload
 
 from _3preprocessing import load_and_preprocess_data, split_and_preprocess_data, create_global_preprocessor, save_global_preprocessor, load_global_preprocessor
@@ -31,79 +31,68 @@ def main():
     # Mode selection
     mode = st.radio("Select Mode", ["Training", "Prediction"])
 
-    if mode == "Training":
-        st.header("Training Mode")
-        run_training_mode()
-    else:
-        st.header("Prediction Mode")
-        run_prediction_mode()
+    # Get user inputs based on the selected mode
+    user_config = get_user_inputs(mode)
 
-def run_training_mode():
-    # File upload
-    uploaded_file = st.file_uploader("Choose a CSV or Excel file", type=["csv", "xlsx"])
-    
-    if uploaded_file is not None:
-        # Load data
-        data = load_data(uploaded_file, None)  # We'll handle sheet selection later if it's an Excel file
-        st.write("Data loaded successfully.")
-        
-        # Display data info and preview
-        display_data_info(data)
-        
-        # Select percentage of data for training
-        train_size = st.slider("Select percentage of data for training", 0.1, 0.9, 0.8)
-        config.update(train_size=train_size)
-        
-        # Column selection and outlier removal
-        column_types, outlier_removal = display_column_selection(data.columns)
-        config.set_column_types(
-            numerical=[col for col, type in column_types.items() if type == 'numerical'],
-            categorical=[col for col, type in column_types.items() if type == 'categorical'],
-            unused=[col for col, type in column_types.items() if type == 'unused'],
-            target=next((col for col, type in column_types.items() if type == 'target'), None)
-        )
-        config.update_outlier_removal_columns(outlier_removal)
-        
-        # Clustering options
-        use_clustering = st.checkbox("Use clustering", value=False)
-        config.update(use_clustering=use_clustering)
-        
-        if use_clustering:
-            display_clustering_options()
-        
-        # Model selection and tuning
-        col1, col2 = st.columns(2)
-        with col1:
-            models_to_use = st.multiselect("Select models to use", list(config.MODEL_CLASSES.keys()))
-            config.update(models_to_use=models_to_use)
-        
-        with col2:
-            tuning_method = st.selectbox("Select tuning method", ["None", "GridSearchCV", "RandomizedSearchCV"])
-            config.update(tuning_method=tuning_method)
-        
-        # Start training button
-        if st.button("Start Training"):
-            with st.spinner("Training in progress..."):
-                try:
+    if mode == "Training":
+        run_training_mode(user_config)
+    else:
+        run_prediction_mode(user_config)
+
+def run_training_mode(user_config):
+    st.header("Training Mode")
+
+    if user_config.file_path is not None:
+        try:
+            # Load data
+            data = load_data(user_config.file_path, user_config.sheet_name)
+            st.write("Data loaded successfully.")
+            display_data_info(data)
+
+            # Auto-detect column types
+            initial_types = auto_detect_column_types(data)
+
+            # Manual column selection
+            selected_columns = display_column_selection(data.columns, initial_types)
+            if selected_columns is None:
+                return
+
+            config.set_column_types(
+                numerical=selected_columns['numerical'],
+                categorical=selected_columns['categorical'],
+                unused=selected_columns['unused'],
+                target=selected_columns['target']
+            )
+
+            # Validate 2D clustering columns
+            if len(set(config.clustering_2d_columns)) != len(config.clustering_2d_columns):
+                st.error("Please select different columns for 2D clustering.")
+                return
+            if any(col in config.unused_columns for col in config.clustering_2d_columns):
+                st.error("Cannot use unused columns for clustering.")
+                return
+
+            if st.button("Start Training"):
+                with st.spinner("Training in progress..."):
                     # Preprocess data
                     preprocessed_data = load_and_preprocess_data(data, config)
                     
                     # Create clusters if clustering is enabled
-                    if use_clustering:
-                        clustered_data = create_clusters(preprocessed_data, config.clustering_config, config.clustering_2d_config)
+                    if user_config.use_clustering:
+                        clustered_data = create_clusters(preprocessed_data, user_config.clustering_config, user_config.clustering_2d_config)
                     else:
                         clustered_data = {'no_cluster': {'label_0': preprocessed_data.index}}
                     
                     # Split and preprocess data
-                    data_splits = split_and_preprocess_data(preprocessed_data, clustered_data, config.target_column, config.train_size)
+                    data_splits = split_and_preprocess_data(preprocessed_data, clustered_data, config.target_column, user_config.train_size)
                     
                     # Generate features
                     feature_generation_functions = []
-                    if config.use_polynomial_features:
+                    if user_config.use_polynomial_features:
                         feature_generation_functions.append(generate_polynomial_features)
-                    if config.use_interaction_terms:
+                    if user_config.use_interaction_terms:
                         feature_generation_functions.append(generate_interaction_terms)
-                    if config.use_statistical_features:
+                    if user_config.use_statistical_features:
                         feature_generation_functions.append(generate_statistical_features)
                     
                     clustered_X_train_combined, clustered_X_test_combined = apply_feature_generation(
@@ -113,7 +102,7 @@ def run_training_mode():
                     # Train models
                     all_models, ensemble_cv_results, all_evaluation_metrics = train_and_validate_models(
                         data_splits, clustered_X_train_combined, clustered_X_test_combined, 
-                        config.models_to_use, config.tuning_method
+                        user_config.models_to_use, user_config.tuning_method
                     )
                     
                     # Save models and unused data
@@ -121,7 +110,7 @@ def run_training_mode():
                     save_unused_data(data[config.unused_columns], os.path.join(config.MODELS_DIRECTORY, "unused_data.csv"))
                     
                     # Save clustering configuration
-                    joblib.dump(config.clustering_config, os.path.join(config.MODELS_DIRECTORY, "clustering_config.joblib"))
+                    joblib.dump(user_config.clustering_config, os.path.join(config.MODELS_DIRECTORY, "clustering_config.joblib"))
                     joblib.dump(config.clustering_2d_config, os.path.join(config.MODELS_DIRECTORY, "clustering_2d_config.joblib"))
                     
                     st.success("Training completed successfully!")
@@ -133,13 +122,13 @@ def run_training_mode():
                         for model_name, model_metrics in metrics.items():
                             st.write(f"Model: {model_name}")
                             st.table(pd.DataFrame(model_metrics, index=[0]))
-                
-                except Exception as e:
-                    st.error(f"An error occurred: {str(e)}")
-                    st.error("Check the Streamlit log for more details.")
 
-def run_prediction_mode():
-    user_config = get_prediction_inputs()
+        except Exception as e:
+            st.error(f"An error occurred: {str(e)}")
+            st.error("Check the Streamlit log for more details.")
+
+def run_prediction_mode(user_config):
+    st.header("Prediction Mode")
 
     if user_config.use_saved_models == "Yes":
         # Load saved models and preprocessors
