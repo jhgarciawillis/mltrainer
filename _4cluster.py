@@ -104,19 +104,35 @@ def perform_2d_clustering(data, method, parameters):
     clusters = {f'label_{label}': data.index[cluster_labels == label].tolist() for label in unique_labels}
     return clusters, model
 
+def generate_2d_cluster_filename(column_pair, method):
+    col1, col2 = column_pair
+    return f"2D_{col1[:3]}_{col2[:3]}_{method}.joblib"
+
 def save_clustering_models(cluster_models, save_path):
     """Save clustering models to the specified directory."""
+    os.makedirs(save_path, exist_ok=True)  # Ensure the directory exists
     for column, model in cluster_models.items():
-        joblib.dump(model, os.path.join(save_path, f'cluster_model_{column}.joblib'))
+        if isinstance(column, tuple):  # 2D clustering
+            filename = generate_2d_cluster_filename(column, model.__class__.__name__)
+        else:  # 1D clustering
+            filename = f"cluster_model_{column}.joblib"
+        model_path = os.path.join(save_path, filename)
+        joblib.dump(model, model_path)
     st.success("Clustering models saved successfully.")
 
 def load_clustering_models(models_directory):
     """Load clustering models from the specified directory."""
     cluster_models = {}
     for filename in os.listdir(models_directory):
-        if filename.startswith('cluster_model_') and filename.endswith('.joblib'):
+        if filename.startswith('cluster_model_') or filename.startswith('2D_'):
             model_path = os.path.join(models_directory, filename)
-            column = filename.replace('cluster_model_', '').replace('.joblib', '')
+            if filename.startswith('2D_'):
+                # Extract column names from 2D cluster filename
+                parts = filename.split('_')
+                col1, col2 = parts[1], parts[2]
+                column = (col1, col2)
+            else:
+                column = filename.replace('cluster_model_', '').replace('.joblib', '')
             cluster_models[column] = joblib.load(model_path)
     return cluster_models
 
