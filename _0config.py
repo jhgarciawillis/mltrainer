@@ -134,6 +134,7 @@ class Config:
         self.uploaded_models = None
         self.uploaded_preprocessor = None
         self.new_data_file = None
+        self.STREAMLIT_APP_NAME = STREAMLIT_APP_NAME
 
     def update(self, **kwargs):
         for key, value in kwargs.items():
