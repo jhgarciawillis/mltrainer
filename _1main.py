@@ -88,6 +88,8 @@ def run_training_mode():
                 
                 # 8. Model Saving
                 save_models(config)
+    else:
+        st.warning("Please upload a valid CSV or Excel file.")
 
 def run_prediction_mode():
     st.header("Prediction Mode")
