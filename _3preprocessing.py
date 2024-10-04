@@ -70,10 +70,14 @@ def split_and_preprocess_data(preprocessed_data, clustered_data, target_column, 
         debug_print(f"\n[DEBUG] Processing cluster: {cluster_name}, label: {label}")
 
         if not indices:
-            debug_print(f"Skipping label {label} of cluster {cluster_name} as its indices are empty")
+            debug_print(f"Skipping empty cluster {cluster_name}, label {label}")
             continue
 
         data_subset = preprocessed_data.loc[indices].reset_index(drop=True)
+        if data_subset.empty:
+            debug_print(f"Skipping empty data subset for cluster {cluster_name}, label {label}")
+            continue
+
         X, y = split_features_and_target(data_subset, target_column)
 
         debug_print(f"Data subset for cluster {cluster_name}, label {label} created with shape: {data_subset.shape}")
