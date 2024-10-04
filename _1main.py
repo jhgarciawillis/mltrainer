@@ -31,9 +31,6 @@ def main():
     # Mode selection
     mode = st.radio("Select Mode", ["Training", "Prediction"])
 
-    # Display mode title
-    st.header(f"{mode} Mode")
-
     # Get user inputs based on the selected mode
     user_config = get_user_inputs(mode)
 
@@ -43,21 +40,20 @@ def main():
         run_prediction_mode(user_config)
 
 def run_training_mode(user_config):
+    st.header("Training Mode")
+
     if user_config.file_path is not None:
         try:
             # Load data
             data = load_data(user_config.file_path, user_config.sheet_name)
-            st.success("Data loaded successfully.")
-            
-            # Display data info and preview
+            st.write("Data loaded successfully.")
             display_data_info(data)
 
-            # Train size selection
-            train_size = st.slider("Select percentage of data for training", 0.1, 0.9, 0.8, key='train_size_slider')
-            config.update(train_size=train_size)
+            # Auto-detect column types
+            initial_types = auto_detect_column_types(data)
 
-            # Column selection and outlier removal
-            selected_columns = display_column_selection(data.columns, auto_detect_column_types(data))
+            # Manual column selection
+            selected_columns = display_column_selection(data.columns, initial_types)
             if selected_columns is None:
                 return
 
@@ -68,22 +64,13 @@ def run_training_mode(user_config):
                 target=selected_columns['target']
             )
 
-            # Clustering option
-            use_clustering = st.checkbox("Use clustering", value=False, key='use_clustering_checkbox')
-            config.update(use_clustering=use_clustering)
-
-            if use_clustering:
-                display_clustering_options()
-
-            # Model selection and tuning
-            col1, col2 = st.columns(2)
-            with col1:
-                models_to_use = st.multiselect("Select models to use", list(MODEL_CLASSES.keys()), key='models_multiselect')
-                config.update(models_to_use=models_to_use)
-            
-            with col2:
-                tuning_method = st.selectbox("Select tuning method", ["None", "GridSearchCV", "RandomizedSearchCV"], key='tuning_method_select')
-                config.update(tuning_method=tuning_method)
+            # Validate 2D clustering columns
+            if len(set(config.clustering_2d_columns)) != len(config.clustering_2d_columns):
+                st.error("Please select different columns for 2D clustering.")
+                return
+            if any(col in config.unused_columns for col in config.clustering_2d_columns):
+                st.error("Cannot use unused columns for clustering.")
+                return
 
             if st.button("Start Training"):
                 with st.spinner("Training in progress..."):
