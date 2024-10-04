@@ -30,12 +30,15 @@ def main():
     # Mode selection
     mode = st.sidebar.radio("Select Mode", ["Training", "Prediction"])
 
-    if mode == "Training":
-        run_training_mode()
-    else:
-        run_prediction_mode()
+    # Initialize the Config object
+    config = config
 
-def run_training_mode():
+    if mode == "Training":
+        run_training_mode(config)
+    else:
+        run_prediction_mode(config)
+
+def run_training_mode(config):
     st.header("Training Mode")
 
     # 1. Data Input and Initial Configuration
@@ -58,7 +61,7 @@ def run_training_mode():
                 # 2. Data Preprocessing
                 st.subheader("2. Data Preprocessing")
                 create_info_button("data_preprocessing")
-                data = preprocess_data(data)
+                data = preprocess_data(data, config)
                 
                 # 3. Feature Engineering
                 st.subheader("3. Feature Engineering")
@@ -90,12 +93,12 @@ def run_training_mode():
     else:
         st.warning("Please upload a valid CSV or Excel file.")
 
-def run_prediction_mode():
+def run_prediction_mode(config):
     st.header("Prediction Mode")
     
     # Load saved models and preprocessors
     create_info_button("load_saved_models")
-    models, preprocessors = load_saved_models_and_preprocessors()
+    models, preprocessors = load_saved_models_and_preprocessors(config)
     
     # Upload new data for prediction
     create_info_button("upload_prediction_data")
@@ -114,7 +117,7 @@ def display_sheet_selection(uploaded_file):
     xls = pd.ExcelFile(uploaded_file)
     return st.selectbox("Select sheet", xls.sheet_names)
 
-def preprocess_data(data):
+def preprocess_data(data, config):
     # Automatic column type detection
     create_tooltip(TOOLTIPS["auto_detect_column_types"])
     initial_types = auto_detect_column_types(data)
@@ -220,7 +223,7 @@ def save_models(config):
         save_trained_models(config.all_models, config.MODELS_DIRECTORY)
         st.success("Models saved successfully")
 
-def load_saved_models_and_preprocessors():
+def load_saved_models_and_preprocessors(config):
     all_models = load_saved_models(config.MODELS_DIRECTORY)
     global_preprocessor = load_global_preprocessor(config.MODELS_DIRECTORY)
     clustering_config = joblib.load(os.path.join(config.MODELS_DIRECTORY, "clustering_config.joblib"))
