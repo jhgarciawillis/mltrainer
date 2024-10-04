@@ -6,8 +6,9 @@ import joblib
 import os
 
 from sklearn.cluster import DBSCAN, KMeans
-from _0config import config, MODELS_DIRECTORY
+from _0config import config, MODELS_DIRECTORY, TOOLTIPS, INFO_TEXTS
 from _2misc_utils import debug_print, plot_prediction_vs_actual, flatten_clustered_data
+from _2ui_utils import create_tooltip, create_info_button
 from _7metrics import calculate_metrics, display_metrics, plot_residuals
 
 class PredictionProcessor:
@@ -20,6 +21,7 @@ class PredictionProcessor:
                                 clustered_X_train_combined, clustered_X_test_combined, 
                                 flattened_X_train, flattened_X_test, ensemble_cv_results):
         st.subheader("Creating Predictions File")
+        create_info_button("predictions_file")
         with pd.ExcelWriter(predictions_path, engine='xlsxwriter') as writer:
             self._process_clustered_models(writer, all_models, clustered_X_train_combined, 
                                            clustered_X_test_combined, ensemble_cv_results)
@@ -160,6 +162,7 @@ def make_predictions(model, X_data):
 
 def display_predictions(predictions, actual_values=None):
     st.subheader("Predictions")
+    create_info_button("predictions")
     df = pd.DataFrame({'Predicted': predictions})
     if actual_values is not None:
         df['Actual'] = actual_values
@@ -172,6 +175,7 @@ def display_predictions(predictions, actual_values=None):
 
 def predict_for_new_data(models, new_data, cluster_models, clustering_config, clustering_2d_config):
     st.subheader("Predictions for New Data")
+    create_tooltip(TOOLTIPS["new_data_predictions"])
     
     predictions = []
     for index, row in new_data.iterrows():
